@@ -2,13 +2,18 @@ from __future__ import annotations
 
 import json
 import os
+import sys
 import threading
 import urllib.request
+from pathlib import Path
 import tkinter as tk
+from http.server import ThreadingHTTPServer
 from tkinter import messagebox, simpledialog
 
 DEFAULT_ENDPOINT = os.environ.get("NCOM_ENDPOINT", "http://127.0.0.1:8765")
-REPO_URL = "https://github.com/pfn000/NCOM-AI"
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
 
 
 def post_json(url: str, payload: dict) -> dict:
@@ -24,10 +29,27 @@ def get_json(url: str) -> dict:
 
 
 def publish_activity(endpoint: str, phase: str, detail: str, has_screenshot: bool = False) -> None:
-    post_json(
-        endpoint.rstrip("/") + "/v1/activity",
-        {"phase": phase, "detail": detail, "hasScreenshot": has_screenshot},
-    )
+    post_json(endpoint.rstrip("/") + "/v1/activity", {"phase": phase, "detail": detail, "hasScreenshot": has_screenshot})
+
+
+def start_embedded_runtime() -> ThreadingHTTPServer | None:
+    """Start the local workspace runtime when nothing is already listening."""
+    try:
+        from core import ncom_server
+    except ImportError:
+        return None
+
+    host = ncom_server.DEFAULT_HOST
+    port = ncom_server.DEFAULT_PORT
+    try:
+        server = ThreadingHTTPServer((host, port), ncom_server.Handler)
+    except OSError:
+        # An existing runtime may already be serving the configured port.
+        return None
+
+    thread = threading.Thread(target=server.serve_forever, name="ncom-runtime", daemon=True)
+    thread.start()
+    return server
 
 
 class NCOMDesktop(tk.Tk):
@@ -37,11 +59,12 @@ class NCOMDesktop(tk.Tk):
         self.geometry("980x680")
         self.minsize(800, 520)
         self.endpoint = DEFAULT_ENDPOINT
+        self.runtime_server = start_embedded_runtime()
 
         header = tk.Frame(self, padx=16, pady=12)
         header.pack(fill="x")
         tk.Label(header, text="NCOM AI", font=("TkDefaultFont", 20, "bold")).pack(side="left")
-        self.status = tk.Label(header, text="offline", padx=12)
+        self.status = tk.Label(header, text="starting runtime…", padx=12)
         self.status.pack(side="right")
 
         body = tk.Frame(self)
@@ -60,9 +83,10 @@ class NCOMDesktop(tk.Tk):
 
         footer = tk.Frame(self, padx=16, pady=8)
         footer.pack(fill="x")
-        tk.Label(footer, text="Local-first • CPU inference • MCP-ready").pack(side="left")
+        tk.Label(footer, text="Local-first • CPU inference • MCP-ready • workspace runtime active").pack(side="left")
 
-        self.health()
+        self.protocol("WM_DELETE_WINDOW", self.close)
+        self.after(100, self.health)
 
     def write(self, text: str) -> None:
         self.output.configure(state="normal")
@@ -109,6 +133,12 @@ class NCOMDesktop(tk.Tk):
             self.after(0, lambda: self.write(f"NCOM: {reply}"))
 
         threading.Thread(target=run, daemon=True).start()
+
+    def close(self) -> None:
+        if self.runtime_server is not None:
+            self.runtime_server.shutdown()
+            self.runtime_server.server_close()
+        self.destroy()
 
 
 if __name__ == "__main__":

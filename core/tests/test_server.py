@@ -1,33 +1,26 @@
 import json
-import os
 import sys
+from http.client import HTTPConnection
+from http.server import ThreadingHTTPServer
 from pathlib import Path
+from threading import Thread
 
 sys.path.insert(0, str(Path(__file__).parents[1]))
 
 
-def load_server_module():
-    # The server reads environment variables at import time, so tests control them explicitly.
-    os.environ.pop("NCOM_FEED_TOKEN", None)
+def load_server_module(monkeypatch, token: str | None, activity_file: Path):
+    monkeypatch.setenv("NCOM_ACTIVITY_FILE", str(activity_file))
+    if token is None:
+        monkeypatch.delenv("NCOM_FEED_TOKEN", raising=False)
+    else:
+        monkeypatch.setenv("NCOM_FEED_TOKEN", token)
+    sys.modules.pop("ncom_server", None)
     import ncom_server
 
     return ncom_server
 
 
-def make_handler(server_module):
-    return server_module.Handler
-
-
-def request(handler_class, method, path, body=b"", headers=None):
-    from http.client import HTTPConnection
-    from threading import Thread
-
-    class Server(handler_class.__mro__[1]):
-        pass
-
-    # Use an in-process HTTP server subclass with the production handler.
-    from http.server import ThreadingHTTPServer
-
+def request(handler_class, method: str, path: str, body: bytes = b"", headers: dict[str, str] | None = None):
     httpd = ThreadingHTTPServer(("127.0.0.1", 0), handler_class)
     thread = Thread(target=httpd.serve_forever, daemon=True)
     thread.start()
@@ -44,12 +37,9 @@ def request(handler_class, method, path, body=b"", headers=None):
 
 
 def test_workspace_is_reachable_without_optional_token(monkeypatch, tmp_path):
-    monkeypatch.delenv("NCOM_FEED_TOKEN", raising=False)
-    monkeypatch.setenv("NCOM_ACTIVITY_FILE", str(tmp_path / "activity.json"))
-    sys.modules.pop("ncom_server", None)
-    server = load_server_module()
+    server = load_server_module(monkeypatch, None, tmp_path / "activity.json")
 
-    status, payload = request(make_handler(server), "GET", "/v1/workspace")
+    status, payload = request(server.Handler, "GET", "/v1/workspace")
     assert status == 200
     data = json.loads(payload)
     assert data["service"] == "ncom"
@@ -57,16 +47,13 @@ def test_workspace_is_reachable_without_optional_token(monkeypatch, tmp_path):
 
 
 def test_workspace_requires_configured_token(monkeypatch, tmp_path):
-    monkeypatch.setenv("NCOM_FEED_TOKEN", "secret")
-    monkeypatch.setenv("NCOM_ACTIVITY_FILE", str(tmp_path / "activity.json"))
-    sys.modules.pop("ncom_server", None)
-    server = load_server_module()
+    server = load_server_module(monkeypatch, "secret", tmp_path / "activity.json")
 
-    status, _ = request(make_handler(server), "GET", "/v1/workspace")
+    status, _ = request(server.Handler, "GET", "/v1/workspace")
     assert status == 401
 
     status, _ = request(
-        make_handler(server),
+        server.Handler,
         "GET",
         "/v1/workspace",
         headers={"X-NCOM-Feed-Token": "secret"},
@@ -75,14 +62,11 @@ def test_workspace_requires_configured_token(monkeypatch, tmp_path):
 
 
 def test_activity_round_trip(monkeypatch, tmp_path):
-    monkeypatch.delenv("NCOM_FEED_TOKEN", raising=False)
-    monkeypatch.setenv("NCOM_ACTIVITY_FILE", str(tmp_path / "activity.json"))
-    sys.modules.pop("ncom_server", None)
-    server = load_server_module()
+    server = load_server_module(monkeypatch, None, tmp_path / "activity.json")
     body = json.dumps({"phase": "Building", "detail": "Swift compile", "hasScreenshot": False}).encode()
 
     status, _ = request(
-        make_handler(server),
+        server.Handler,
         "POST",
         "/v1/activity",
         body=body,
@@ -90,6 +74,6 @@ def test_activity_round_trip(monkeypatch, tmp_path):
     )
     assert status == 200
 
-    status, payload = request(make_handler(server), "GET", "/v1/activity")
+    status, payload = request(server.Handler, "GET", "/v1/activity")
     assert status == 200
     assert json.loads(payload)["phase"] == "Building"

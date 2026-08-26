@@ -2,11 +2,14 @@ import Foundation
 import SwiftUI
 import UIKit
 
+/// The primary live-work surface in NCOM iOS.
+/// "Desktop" means the internal NCOM Desktop VM by default.
+/// A physical PC-host feed can be selected later as an optional expansion source.
 struct NCOMDesktopActivityView: View {
     let endpoint: String
     @AppStorage("ncomFeedToken") private var feedToken = ""
-    @State private var phase = "Desktop feed unavailable"
-    @State private var detail = "Connect an NCOM desktop runtime to stream coding, build, and VM activity."
+    @State private var phase = "NCOM Desktop VM unavailable"
+    @State private var detail = "The internal NCOM Desktop VM is the default live workspace. Start it to stream coding, build, and VM activity."
     @State private var screenshot: UIImage?
     @State private var polling = false
     @State private var needsToken = false
@@ -15,7 +18,13 @@ struct NCOMDesktopActivityView: View {
         VStack(alignment: .leading, spacing: 10) {
             HStack(spacing: 8) {
                 Circle().fill(polling ? .orange : statusColor).frame(width: 8, height: 8)
-                Text(phase).font(.system(.subheadline, design: .rounded).weight(.semibold))
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("NCOM Desktop VM")
+                        .font(.system(.subheadline, design: .rounded).weight(.semibold))
+                    Text(phase)
+                        .font(.system(.caption, design: .rounded))
+                        .foregroundStyle(.secondary)
+                }
                 Spacer()
                 Button("Refresh") { Task { await refresh() } }
                     .buttonStyle(.bordered)
@@ -26,17 +35,25 @@ struct NCOMDesktopActivityView: View {
                     .resizable()
                     .scaledToFit()
                     .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
-                    .accessibilityLabel("Live NCOM desktop or virtual machine display")
+                    .overlay(alignment: .topLeading) {
+                        Text("DESKTOP VM")
+                            .font(.system(.caption2, design: .rounded).weight(.bold))
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 5)
+                            .background(.ultraThinMaterial, in: Capsule())
+                            .padding(10)
+                    }
+                    .accessibilityLabel("Live NCOM Desktop VM display")
             } else {
                 RoundedRectangle(cornerRadius: 18, style: .continuous)
                     .fill(.black.opacity(0.32))
                     .frame(height: 160)
                     .overlay {
                         VStack(spacing: 8) {
-                            Image(systemName: "display")
+                            Image(systemName: "desktopcomputer")
                                 .font(.system(size: 27))
                                 .foregroundStyle(.secondary)
-                            Text("Desktop / VM display")
+                            Text("NCOM Desktop VM")
                                 .font(.system(.subheadline, design: .rounded).weight(.semibold))
                             Text(detail)
                                 .font(.system(.caption, design: .rounded))
@@ -70,7 +87,8 @@ struct NCOMDesktopActivityView: View {
         screenshot = nil
         let base = endpoint.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
         guard let activityURL = URL(string: base + "/v1/activity") else {
-            phase = "Invalid desktop endpoint"
+            phase = "Invalid NCOM runtime endpoint"
+            detail = "NCOM Desktop VM uses the configured NCOM runtime endpoint."
             needsToken = false
             return
         }
@@ -82,8 +100,8 @@ struct NCOMDesktopActivityView: View {
             let (data, response) = try await URLSession.shared.data(for: request)
             guard let http = response as? HTTPURLResponse else { throw URLError(.badServerResponse) }
             if http.statusCode == 401 {
-                phase = "Desktop feed requires pairing"
-                detail = "Enter the NCOM desktop feed token to authorize the live view."
+                phase = "Desktop VM feed requires pairing"
+                detail = "Authorize the NCOM Desktop VM live feed to view its display."
                 needsToken = true
                 return
             }
@@ -103,8 +121,8 @@ struct NCOMDesktopActivityView: View {
                 }
             }
         } catch {
-            phase = "Desktop feed unavailable"
-            detail = "No live desktop/VM feed is available at this endpoint. NCOM will not fabricate one."
+            phase = "NCOM Desktop VM feed unavailable"
+            detail = "The internal Desktop VM is the default source. A physical PC host can be added later as an optional feed."
         }
     }
 }

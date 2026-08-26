@@ -32,6 +32,15 @@ struct NCOMAboutView: View {
                         Text("Project identity & provenance").foregroundStyle(.secondary)
                     }
                 }
+
+                NavigationLink {
+                    NCOMProfileView()
+                } label: {
+                    Label("Owner Profile", systemImage: "person.crop.circle")
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                }
+                .buttonStyle(.borderedProminent)
+
                 VStack(alignment: .leading, spacing: 0) {
                     ForEach(Array(rows.enumerated()), id: \.offset) { index, row in
                         LabeledContent(row.0, value: row.1)
@@ -42,6 +51,7 @@ struct NCOMAboutView: View {
                 }
                 .padding(16)
                 .background(RoundedRectangle(cornerRadius: 24, style: .continuous).fill(.regularMaterial))
+
                 Text("NCOM AI is a private-development project. Distribution, signing, and App Store metadata are controlled separately from the application UI.")
                     .font(.footnote)
                     .foregroundStyle(.secondary)

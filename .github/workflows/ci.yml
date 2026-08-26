@@ -13,6 +13,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
       - name: Validate repository layout
         shell: bash
         run: |
@@ -29,4 +32,10 @@ jobs:
           test -d desktop
           test -d web
           test -d ios
-          echo 'NCOM repository scaffold validated.'
+      - name: Run core tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pip install --disable-pip-version-check --no-input pytest
+          cd core
+          PYTHONPATH=. python -m pytest -q

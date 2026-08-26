@@ -3,9 +3,16 @@ import SwiftUI
 
 @main
 struct NCOMApp: App {
-    @StateObject private var engine = NCOMEngine()
-    @StateObject private var models = NCOMLocalModelManager()
-    @StateObject private var library = NCOMAppLibrary()
+    @StateObject private var models: NCOMLocalModelManager
+    @StateObject private var engine: NCOMEngine
+    @StateObject private var library: NCOMAppLibrary
+
+    init() {
+        let sharedModels = NCOMLocalModelManager()
+        _models = StateObject(wrappedValue: sharedModels)
+        _engine = StateObject(wrappedValue: NCOMEngine(localModels: sharedModels))
+        _library = StateObject(wrappedValue: NCOMAppLibrary())
+    }
 
     var body: some Scene {
         WindowGroup {
@@ -34,12 +41,7 @@ struct NCOMLogo: View {
 
 struct NCOMBackground: View {
     var body: some View {
-        LinearGradient(
-            colors: [Color.black, Color(red: 0.045, green: 0.05, blue: 0.07), Color.black],
-            startPoint: .topLeading,
-            endPoint: .bottomTrailing
-        )
-        .ignoresSafeArea()
+        LinearGradient(colors: [.black, Color(red: 0.045, green: 0.05, blue: 0.07), .black], startPoint: .topLeading, endPoint: .bottomTrailing).ignoresSafeArea()
     }
 }
 
@@ -78,8 +80,7 @@ struct NCOMGlassButtonStyle: ButtonStyle {
                         .fill(.clear)
                         .glassEffect(prominent ? .regular.tint(.accentColor) : .regular, in: .rect(cornerRadius: NCOMMetrics.glassRadius, style: .continuous))
                 } else {
-                    RoundedRectangle(cornerRadius: NCOMMetrics.glassRadius, style: .continuous)
-                        .fill(prominent ? Color.accentColor : Color.white.opacity(0.06))
+                    RoundedRectangle(cornerRadius: NCOMMetrics.glassRadius, style: .continuous).fill(prominent ? Color.accentColor : Color.white.opacity(0.06))
                 }
             }
             .scaleEffect(configuration.isPressed ? 0.97 : 1)
@@ -94,38 +95,24 @@ struct NCOMRootView: View {
 
     var body: some View {
         TabView(selection: $selection) {
-            ContentView()
-                .tabItem { Label("Chat", systemImage: "bubble.left.and.bubble.right.fill") }
-                .tag(RootTab.chat)
-            NCOMAppsView()
-                .tabItem { Label("Apps", systemImage: "square.grid.3x3.fill") }
-                .tag(RootTab.apps)
-            NCOMDevicesView()
-                .tabItem { Label("Devices", systemImage: "antenna.radiowaves.left.and.right") }
-                .tag(RootTab.devices)
+            ContentView().tabItem { Label("Chat", systemImage: "bubble.left.and.bubble.right.fill") }.tag(RootTab.chat)
+            NCOMAppsView().tabItem { Label("Apps", systemImage: "square.grid.3x3.fill") }.tag(RootTab.apps)
+            NCOMDevicesView().tabItem { Label("Devices", systemImage: "antenna.radiowaves.left.and.right") }.tag(RootTab.devices)
             NavigationStack { NCOMDesktopActivityView(endpoint: UserDefaults.standard.string(forKey: "ncomEndpoint") ?? "http://127.0.0.1:8765").padding().background(NCOMBackground()) }
-                .tabItem { Label("Desktop", systemImage: "display.2") }
-                .tag(RootTab.desktop)
+                .tabItem { Label("Desktop", systemImage: "display.2") }.tag(RootTab.desktop)
             NavigationStack {
                 Form {
-                    Section("NCOM") {
-                        Button("About NCOM") { showAbout = true }
-                        Button("Owner Profile") { showProfile = true }
-                    }
-                    Section("Model") {
-                        Text("Apple Foundation Models acts as the cognitive header when available. Local GGUF models are managed by NCOM Engine.").font(.footnote).foregroundStyle(.secondary)
-                    }
+                    Section("NCOM") { Button("About NCOM") { showAbout = true }; Button("Owner Profile") { showProfile = true } }
+                    Section("Model") { Text("Apple Foundation Models is the cognitive header when available. NCOM Engine can fall back to multiple local GGUF models through llama.cpp.").font(.footnote).foregroundStyle(.secondary) }
                 }
                 .navigationTitle("Settings")
             }
-            .tabItem { Label("Settings", systemImage: "gearshape.fill") }
-            .tag(RootTab.settings)
+            .tabItem { Label("Settings", systemImage: "gearshape.fill") }.tag(RootTab.settings)
         }
         .preferredColorScheme(.dark)
         .sheet(isPresented: $showAbout) { NavigationStack { NCOMAboutView() } }
         .sheet(isPresented: $showProfile) { NavigationStack { NCOMProfileView() } }
     }
-
     enum RootTab: Hashable { case chat, apps, devices, desktop, settings }
 }
 
@@ -185,15 +172,7 @@ struct ContentView: View {
     private var cognitiveCard: some View {
         NCOMGlassCard {
             VStack(alignment: .leading, spacing: 12) {
-                sectionTitle("COGNITIVE HEADER")
-                HStack(spacing: 12) {
-                    Image(systemName: "brain.head.profile").font(.title2).foregroundStyle(.blue)
-                    VStack(alignment: .leading, spacing: 3) {
-                        Text("Apple Foundation Models").font(.system(.headline, design: .rounded))
-                        Text("Primary on-device reasoning layer; NCOM supplies the tools and execution guts.").font(.system(.footnote, design: .rounded)).foregroundStyle(.secondary)
-                    }
-                    Spacer()
-                }
+                HStack(spacing: 12) { Image(systemName: "brain.head.profile").font(.title2).foregroundStyle(.blue); VStack(alignment: .leading, spacing: 3) { Text("Apple Foundation Models").font(.headline); Text("Cognitive header • NCOM Engine provides tools, memory, devices and execution.").font(.footnote).foregroundStyle(.secondary) }; Spacer() }
                 HStack(spacing: 8) { chip("On device"); chip("Private"); chip("Tool calling") }
             }
         }
@@ -202,21 +181,15 @@ struct ContentView: View {
     private func conversationCard(proxy: ScrollViewProxy) -> some View {
         NCOMGlassCard {
             VStack(alignment: .leading, spacing: 12) {
-                HStack { sectionTitle("CHAT"); Spacer(); if engine.state == .thinking { ProgressView().controlSize(.small) } }
+                HStack { Text("CHAT").font(.caption.bold()).foregroundStyle(.secondary).tracking(1); Spacer(); if engine.state == .thinking { ProgressView().controlSize(.small) } }
                 if messages.isEmpty {
-                    VStack(spacing: 9) { NCOMLogo(size: 26); Text("Ready when you are").font(.headline); Text("This is normal AI chat. NCOM can bring tools, models, the Desktop VM, and devices into the conversation when a task needs them.").font(.footnote).foregroundStyle(.secondary).multilineTextAlignment(.center) }
+                    VStack(spacing: 9) { NCOMLogo(size: 26); Text("Ready when you are").font(.headline); Text("Normal AI chat. NCOM can call its tools, local models, Desktop VM and devices when a task needs them.").font(.footnote).foregroundStyle(.secondary).multilineTextAlignment(.center) }
                         .frame(maxWidth: .infinity).padding(.vertical, 14)
-                } else {
-                    ForEach(messages) { message in messageBubble(message).id(message.id) }
-                }
+                } else { ForEach(messages) { message in messageBubble(message).id(message.id) } }
                 HStack(alignment: .bottom, spacing: 10) {
-                    TextField("Talk to NCOM…", text: $input, axis: .vertical)
-                        .font(.system(.body, design: .rounded)).textFieldStyle(.plain).padding(12)
-                        .background(.white.opacity(0.055), in: RoundedRectangle(cornerRadius: 18, style: .continuous)).lineLimit(1...6)
-                        .accessibilityIdentifier("chatInput")
+                    TextField("Talk to NCOM…", text: $input, axis: .vertical).font(.system(.body, design: .rounded)).textFieldStyle(.plain).padding(12).background(.white.opacity(0.055), in: RoundedRectangle(cornerRadius: 18, style: .continuous)).lineLimit(1...6).accessibilityIdentifier("chatInput")
                     Button {
-                        let text = input; input = ""
-                        guard !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
+                        let text = input; input = ""; guard !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
                         Task { messages.append(Message(role: .user, content: text)); let response = await engine.respond(to: text); messages.append(Message(role: .assistant, content: response)); if let last = messages.last { withAnimation(.easeOut(duration: 0.2)) { proxy.scrollTo(last.id, anchor: .bottom) } } }
                     } label: { Image(systemName: "arrow.up").font(.system(size: 17, weight: .bold)).frame(width: 44, height: 44) }
                     .buttonStyle(NCOMGlassButtonStyle(prominent: true)).disabled(input.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || engine.state == .thinking).accessibilityIdentifier("sendButton")
@@ -226,32 +199,16 @@ struct ContentView: View {
     }
 
     private var modelStrip: some View {
-        NCOMGlassCard {
-            VStack(alignment: .leading, spacing: 9) {
-                HStack { sectionTitle("LOCAL MODELS"); Spacer(); Text("\(models.loadedModels.count) active").font(.caption).foregroundStyle(.secondary) }
-                if models.loadedModels.isEmpty { Text("No GGUF model loaded. Import or download models from Model Lab when you want local fallback/parallel inference.").font(.footnote).foregroundStyle(.secondary) }
-                else { HStack(spacing: 8) { ForEach(models.loadedModels) { Text($0.name).font(.caption).padding(.horizontal, 9).padding(.vertical, 6).background(.white.opacity(0.055), in: Capsule()) } } }
-            }
-        }
+        NCOMGlassCard { VStack(alignment: .leading, spacing: 9) { HStack { Text("LOCAL MODELS").font(.caption.bold()).foregroundStyle(.secondary).tracking(1); Spacer(); Text("\(models.loadedModels.count) active").font(.caption).foregroundStyle(.secondary) }; if models.loadedModels.isEmpty { Text("No GGUF models loaded. Model Lab can import/download and run multiple models concurrently when the device has enough memory.").font(.footnote).foregroundStyle(.secondary) } else { HStack(spacing: 8) { ForEach(models.loadedModels) { Text($0.name).font(.caption).padding(.horizontal, 9).padding(.vertical, 6).background(.white.opacity(0.055), in: Capsule()) } } } } }
     }
 
-    private var executionStrip: some View {
-        NCOMGlassCard {
-            HStack(spacing: 10) { Image(systemName: "bolt.horizontal.circle").foregroundStyle(.orange); VStack(alignment: .leading) { Text("NCOM Engine").font(.headline); Text("Tools • MCP • Skills • Memory • VM • Devices").font(.caption).foregroundStyle(.secondary) }; Spacer(); Text("LIVE").font(.caption2.bold()).foregroundStyle(.secondary) }
-        }
-    }
-
+    private var executionStrip: some View { NCOMGlassCard { HStack(spacing: 10) { Image(systemName: "bolt.horizontal.circle").foregroundStyle(.orange); VStack(alignment: .leading) { Text("NCOM Engine").font(.headline); Text("Tool Router • MCP • Skills • Memory • Desktop VM • Devices").font(.caption).foregroundStyle(.secondary) }; Spacer(); Text("LIVE").font(.caption2.bold()).foregroundStyle(.secondary) } } }
     private func messageBubble(_ message: Message) -> some View { HStack { if message.role == .assistant { Spacer(minLength: 24) }; Text(message.content).font(.system(.body, design: .rounded)).padding(12).background(message.role == .user ? Color.accentColor.opacity(0.18) : Color.white.opacity(0.06), in: RoundedRectangle(cornerRadius: 18, style: .continuous)); if message.role == .user { Spacer(minLength: 24) } } }
-    private func sectionTitle(_ text: String) -> some View { Text(text).font(.system(.caption, design: .rounded).weight(.bold)).foregroundStyle(.secondary).tracking(1.0) }
-    private func chip(_ text: String) -> some View { Text(text).font(.system(.caption, design: .rounded).weight(.medium)).foregroundStyle(.secondary).padding(.horizontal, 9).padding(.vertical, 6).background(.white.opacity(0.055), in: Capsule()) }
+    private func chip(_ text: String) -> some View { Text(text).font(.caption).foregroundStyle(.secondary).padding(.horizontal, 9).padding(.vertical, 6).background(.white.opacity(0.055), in: Capsule()) }
     private var engineColor: Color { switch engine.state { case .ready: return .green; case .thinking: return .orange; case .unavailable: return .gray; case .error: return .red } }
 }
 
 struct NCOMActivityView: View {
     @EnvironmentObject private var engine: NCOMEngine
-    var body: some View {
-        ScrollView { VStack(alignment: .leading, spacing: 12) { ForEach(engine.events.reversed()) { event in NCOMGlassCard { HStack(alignment: .top, spacing: 8) { Circle().fill(.secondary).frame(width: 6, height: 6).padding(.top, 6); VStack(alignment: .leading) { Text(event.title).font(.subheadline.bold()); Text(event.detail).font(.caption).foregroundStyle(.secondary) }; Spacer(); Text(event.timestamp, style: .time).font(.caption2).foregroundStyle(.secondary) } } }; if engine.events.isEmpty { ContentUnavailableView("No activity yet", systemImage: "waveform.path.ecg", description: Text("Execution events will appear here.")) } }.padding() }.background(NCOMBackground()).navigationTitle("Activity")
-    }
+    var body: some View { ScrollView { VStack(alignment: .leading, spacing: 12) { if engine.events.isEmpty { ContentUnavailableView("No activity yet", systemImage: "waveform.path.ecg", description: Text("Execution events will appear here.")) }; ForEach(engine.events.reversed()) { event in NCOMGlassCard { HStack(alignment: .top, spacing: 8) { Circle().fill(.secondary).frame(width: 6, height: 6).padding(.top, 6); VStack(alignment: .leading) { Text(event.title).font(.subheadline.bold()); Text(event.detail).font(.caption).foregroundStyle(.secondary) }; Spacer(); Text(event.timestamp, style: .time).font(.caption2).foregroundStyle(.secondary) } } } }.padding() }.background(NCOMBackground()).navigationTitle("Activity") }
 }
-
-private struct Message: Identifiable, Equatable { let id = UUID(); let role: Role; let content: String; enum Role { case user, assistant } }

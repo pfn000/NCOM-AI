@@ -1,0 +1,12 @@
+{
+  "name": "ncom-miniswift-visual-tool",
+  "private": true,
+  "type": "module",
+  "description": "Playwright visual verification adapter for MiniSwift Studio",
+  "scripts": {
+    "shot": "node miniswift-shot.mjs"
+  },
+  "dependencies": {
+    "playwright": "^1.55.0"
+  }
+}

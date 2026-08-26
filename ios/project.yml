@@ -28,8 +28,18 @@ targets:
         INFOPLIST_KEY_NSBluetoothAlwaysUsageDescription: NCOM uses Bluetooth to discover and connect to your authorized NCOM devices.
         INFOPLIST_KEY_NFCReaderUsageDescription: NCOM uses NFC to identify supported tags and authorized accessories.
         INFOPLIST_KEY_NSMicrophoneUsageDescription: NCOM uses the microphone for its optional acoustic AI link.
+        INFOPLIST_KEY_MicrosoftClientID: CONFIGURE_IN_PRIVATE_BUILD
+        INFOPLIST_KEY_UIBackgroundModes: [processing]
+        INFOPLIST_KEY_BGTaskSchedulerPermittedIdentifiers: [com.ncom.ai.program-worker]
         TARGETED_DEVICE_FAMILY: '1,2'
         GENERATE_INFOPLIST_FILE: YES
+      base:
+        SWIFT_VERSION: '6.0'
+    infoProperties:
+      CFBundleURLTypes:
+        - CFBundleTypeRole: Editor
+          CFBundleURLSchemes:
+            - com.ncom.ai
   NCOMAIUITests:
     type: bundle.ui-testing
     platform: iOS

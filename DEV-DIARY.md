@@ -71,13 +71,20 @@ The desktop client and HTTP server use Python standard library components. The w
 ### Verification basis
 MiniSwift's public site documents the Studio as a browser-resident Swift/SwiftUI compiler/runtime with a live iPhone-style canvas. The public support page also documents the SwiftUI API coverage used by the Studio.
 
+### 2026-08-26 — Follow-up: asynchronous build handling
+- User-provided Studio console output showed repeated `KUI2031` platform-extension warnings followed by `Build succeeded · 3 view(s)`.
+- Determined that the original screenshot driver searched for the phone preview immediately after pressing Run, before asynchronous compilation/render completion.
+- Updated `miniswift-shot.mjs` to wait for the explicit `Build succeeded · N view(s)` message before attempting preview detection.
+- Added an optional `--success-selector` override for future MiniSwift DOM changes.
+- Kept `KUI2031` warnings non-fatal; the explicit build-success signal is the authoritative compilation result for this automation step.
+
 ### Tests actually run
-- The repository contains the executable Playwright adapter and selector fallbacks.
-- The local environment does not have the Playwright Node package installed, and `npm view playwright version` timed out, so an actual browser screenshot could not be truthfully reported from this environment.
-- No claim is made that a MiniSwift screenshot has already been captured.
+- The repository contains the updated Playwright adapter and selector fallbacks.
+- The local environment still does not have the Playwright Node package installed, so an actual browser screenshot has not been claimed from this environment.
+- The provided MiniSwift log demonstrates a successful build (`Build succeeded · 3 view(s)`); it does not demonstrate screenshot capture.
 
 ### Next action
-Install Playwright in the target development environment, run the first real SwiftUI screenshot against MiniSwift Studio, then add a screenshot-based CI smoke test and connect the artifact to the SwiftUI skill loop.
+Install Playwright in the target development environment, run the first real SwiftUI screenshot against MiniSwift Studio, inspect the captured phone image, and add the resulting screenshot smoke test to CI.
 
 ## Entry format
 Each future entry should record:

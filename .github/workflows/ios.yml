@@ -67,7 +67,7 @@ jobs:
 
       - name: Launch app
         run: |
-          xcrun simctl launch "${{ steps.simulator.outputs.udid }}" com.pfn000.NCOMAI
+          xcrun simctl launch "${{ steps.simulator.outputs.udid }}" com.ncom.ai
           sleep 3
 
       - name: Capture simulator screenshot

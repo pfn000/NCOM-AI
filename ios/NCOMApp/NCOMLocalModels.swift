@@ -14,7 +14,7 @@ final class NCOMLocalModelManager: ObservableObject {
         var role: Role
         var state: State
         var error: String?
-        enum Role: String, Codable, CaseIterable { case coder, reasoner, vision, general, judge }
+        enum Role: String, Codable, CaseIterable { case coder, reasoner, vision, general, judge, security }
         enum State: String, Codable { case imported, loading, loaded, generating, unloaded, failed }
     }
 
@@ -29,6 +29,9 @@ final class NCOMLocalModelManager: ObservableObject {
         let base = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
         modelDirectory = base.appendingPathComponent("NCOM/Models", isDirectory: true)
         try? FileManager.default.createDirectory(at: modelDirectory, withIntermediateDirectories: true)
+        #if canImport(LlamaSwift)
+        llama_backend_init()
+        #endif
         restore()
     }
 
@@ -89,6 +92,7 @@ final class NCOMLocalModelManager: ObservableObject {
         contexts.removeValue(forKey: id)
         mutate(id) { $0.state = .unloaded; $0.error = nil }
         persist()
+        if let model = models.first(where: { $0.id == id }) { activity.insert("Unloaded \(model.name)", at: 0) }
     }
 
     func respond(prompt: String, modelIDs: [UUID]? = nil) async -> String? {
@@ -97,11 +101,12 @@ final class NCOMLocalModelManager: ObservableObject {
         for model in selected { mutate(model.id) { $0.state = .generating } }
         defer { for model in selected { mutate(model.id) { $0.state = .loaded } } }
         let results = await withTaskGroup(of: (String, String).self, returning: [(String, String)].self) { group in
-            for model in selected where contexts[model.id] != nil {
-                let context = contexts[model.id]!
+            for model in selected {
+                guard let context = contexts[model.id] else { continue }
+                let name = model.name
                 group.addTask {
-                    do { return (model.name, try await context.generate(prompt: prompt)) }
-                    catch { return (model.name, "[model error: \(error.localizedDescription)]") }
+                    do { return (name, try await context.generate(prompt: prompt)) }
+                    catch { return (name, "[\(name) failed: \(error.localizedDescription)]") }
                 }
             }
             var result: [(String, String)] = []
@@ -119,7 +124,7 @@ final class NCOMLocalModelManager: ObservableObject {
     }
     private func restore() {
         guard let data = UserDefaults.standard.data(forKey: "ncom.model.manifest"), let restored = try? JSONDecoder().decode([Model].self, from: data) else { return }
-        models = restored.filter { FileManager.default.fileExists(atPath: $0.fileURL.path) }.map { var copy = $0; copy.state = .unloaded; return copy }
+        models = restored.filter { FileManager.default.fileExists(atPath: $0.fileURL.path) }.map { var copy = $0; copy.state = .unloaded; copy.error = nil; return copy }
     }
     private func persist() { if let data = try? JSONEncoder().encode(models) { UserDefaults.standard.set(data, forKey: "ncom.model.manifest") } }
     enum ModelError: LocalizedError { case notGGUF, downloadFailed; var errorDescription: String? { self == .notGGUF ? "NCOM accepts GGUF model files." : "The model download failed." } }
@@ -135,7 +140,6 @@ actor NCOMLlamaContext {
     private var cursor: Int32 = 0
 
     static func load(path: String) throws -> NCOMLlamaContext {
-        llama_backend_init()
         var params = llama_model_default_params()
         #if targetEnvironment(simulator)
         params.n_gpu_layers = 0
@@ -167,7 +171,6 @@ actor NCOMLlamaContext {
         llama_batch_free(batch)
         llama_model_free(model)
         llama_free(context)
-        llama_backend_free()
     }
 
     func generate(prompt: String, maxTokens: Int32 = 256) throws -> String {

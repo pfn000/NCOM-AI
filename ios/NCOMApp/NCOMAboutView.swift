@@ -25,26 +25,23 @@ struct NCOMAboutView: View {
                 HStack(spacing: 14) {
                     ZStack {
                         Circle().fill(.white.opacity(0.06)).frame(width: 64, height: 64)
-                        Text("ᵔ-ᵔ")
-                            .font(.system(size: 30, weight: .semibold, design: .rounded))
+                        Text("ᵔ-ᵔ").font(.system(size: 30, weight: .semibold, design: .rounded))
                     }
                     VStack(alignment: .leading, spacing: 3) {
                         Text("NCOM AI").font(.title2.bold())
                         Text("Project identity & provenance").foregroundStyle(.secondary)
                     }
                 }
-
-                NCOMGlassCard {
-                    VStack(alignment: .leading, spacing: 0) {
-                        ForEach(Array(rows.enumerated()), id: \.offset) { index, row in
-                            LabeledContent(row.0, value: row.1)
-                                .font(.system(.subheadline, design: .rounded))
-                                .padding(.vertical, 9)
-                            if index < rows.count - 1 { Divider().opacity(0.18) }
-                        }
+                VStack(alignment: .leading, spacing: 0) {
+                    ForEach(Array(rows.enumerated()), id: \.offset) { index, row in
+                        LabeledContent(row.0, value: row.1)
+                            .font(.system(.subheadline, design: .rounded))
+                            .padding(.vertical, 9)
+                        if index < rows.count - 1 { Divider().opacity(0.18) }
                     }
                 }
-
+                .padding(16)
+                .background(RoundedRectangle(cornerRadius: 24, style: .continuous).fill(.regularMaterial))
                 Text("NCOM AI is a private-development project. Distribution, signing, and App Store metadata are controlled separately from the application UI.")
                     .font(.footnote)
                     .foregroundStyle(.secondary)
@@ -52,19 +49,14 @@ struct NCOMAboutView: View {
             }
             .padding()
         }
-        .background(NCOMBackground())
+        .background(NCOMAboutBackground())
         .navigationTitle("About NCOM")
         .navigationBarTitleDisplayMode(.inline)
     }
 }
 
-struct NCOMBackground: View {
+private struct NCOMAboutBackground: View {
     var body: some View {
-        LinearGradient(
-            colors: [Color.black, Color(red: 0.045, green: 0.05, blue: 0.07), Color.black],
-            startPoint: .topLeading,
-            endPoint: .bottomTrailing
-        )
-        .ignoresSafeArea()
+        LinearGradient(colors: [.black, Color(red: 0.045, green: 0.05, blue: 0.07), .black], startPoint: .topLeading, endPoint: .bottomTrailing).ignoresSafeArea()
     }
 }

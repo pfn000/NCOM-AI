@@ -1,0 +1,22 @@
+{
+  "name": "miniswift_visual_verify",
+  "description": "Compile/render SwiftUI in MiniSwift Studio and capture the phone preview using Playwright.",
+  "input_schema": {
+    "type": "object",
+    "required": ["source", "output"],
+    "properties": {
+      "source": {"type": "string", "description": "Path to a Swift source file."},
+      "output": {"type": "string", "description": "Path for the phone-preview PNG artifact."},
+      "editor_selector": {"type": "string"},
+      "run_selector": {"type": "string"},
+      "preview_selector": {"type": "string"},
+      "timeout_ms": {"type": "integer", "default": 30000}
+    }
+  },
+  "implementation": {
+    "command": ["node", "tools/miniswift/miniswift-shot.mjs"],
+    "network": ["https://miniswift.run/studio/"],
+    "browser": "playwright"
+  },
+  "evidence": ["phone-preview-png", "diagnostic-screenshot-on-failure"]
+}

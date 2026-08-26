@@ -83,8 +83,34 @@ MiniSwift's public site documents the Studio as a browser-resident Swift/SwiftUI
 - The local environment still does not have the Playwright Node package installed, so an actual browser screenshot has not been claimed from this environment.
 - The provided MiniSwift log demonstrates a successful build (`Build succeeded · 3 view(s)`); it does not demonstrate screenshot capture.
 
-### Next action
-Install Playwright in the target development environment, run the first real SwiftUI screenshot against MiniSwift Studio, inspect the captured phone image, and add the resulting screenshot smoke test to CI.
+## 2026-08-26 — Entry 0005: iOS NCOM identity, execution shell, and desktop expansion
+
+### Implemented
+- Added the supplied NCOM project identity metadata to `NCOMAboutView`, including developer, master foundation, owner, legal/private-development status, bullet ID, contact, trust versions, and development-device information.
+- Added an owner profile screen with editable display name/role while deliberately excluding device identifiers and signing secrets.
+- Added an About button and activity button to the iOS application's top-level UI.
+- Reworked the iOS application shell so Apple Foundation Models are treated as the cognitive header and the NCOM Engine/Tool Router remain the execution boundary.
+- Added a live desktop/VM activity surface that can consume real `/v1/activity` and `/v1/display/screenshot` data when an optional desktop runtime is connected. The iOS client explicitly reports an unavailable feed instead of displaying fake desktop state.
+- Added authenticated desktop-feed support with `X-NCOM-Feed-Token`.
+- Added server-side `/v1/activity` and `/v1/display/screenshot` endpoints. Screenshot capture uses the Wayland `grim` utility when installed.
+- Changed the intended iOS bundle identifier to `com.ncom.ai` and updated the simulator workflow to launch that identifier.
+- Added iOS signing/distribution documentation covering Personal Team, Developer Program, Ad Hoc, TestFlight, App Store, and GitHub Actions.
+- Added Schema.org vendor metadata and a canonical project metadata schema with the GitHub repository link and an explicit placeholder for the future Apple Store ID.
+
+### Verification
+- GitHub's previous iOS pipeline successfully built the native SwiftUI app, booted an iPhone Simulator, installed/launched the app, captured a screenshot, and uploaded the `.app` and screenshot artifacts.
+- The new Foundation Models/Engine commit also completed the GitHub iOS build pipeline successfully before this additional desktop-feed/identity work.
+- The latest changes are intended to trigger another iOS pipeline run through the existing `ios/**` path trigger. A fresh screenshot must be tied to that exact commit before it is treated as visual verification of this revision.
+
+### Signing decision
+Apple code signing/provisioning will not be bypassed. Supported paths are used instead: Xcode Personal Team for personal-device development, Apple Developer Program signing for device distribution, and TestFlight/App Store through App Store Connect. Apple's current documentation states that Personal Team provisioning is limited/temporary and that TestFlight distribution requires an Apple Developer Program/App Store Connect workflow.
+
+### Unresolved work
+- Complete native Foundation Models tool coverage beyond the current runtime-status tool.
+- Replace the temporary desktop feed contract with a full NCOM desktop activity/event publisher for coding, builds, and VM state.
+- Add secure pairing flow that provisions the desktop feed token without manual copying.
+- Add signed-device/TestFlight automation once the Apple developer account and App Store Connect identifiers are available.
+- Add the final app icon assets derived from the `ᵔ-ᵔ` identity.
 
 ## Entry format
 Each future entry should record:

@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "title": "NCOM AI Vendor Metadata",
+  "description": "Canonical project/vendor metadata for NCOM AI. App Store identifiers remain placeholders until assigned by Apple.",
+  "properties": {
+    "name": { "const": "NCOM AI" },
+    "developer": { "const": "NCOM Playground" },
+    "masterFoundation": { "const": "NCOM Systems" },
+    "masterFoundationOwner": { "const": "Saidie Quinn Newara [ Peter Newara ]" },
+    "version": { "type": "string", "const": "0.1.0" },
+    "legalStatus": { "const": "NOT FOR PUBLIC RELEASE" },
+    "legalTag": { "const": "(c)2025 NCOM Systems PRIVATE PROPERTY" },
+    "bulletId": { "const": "NCO: Playground08.26.26JENAAIios" },
+    "contact": { "const": "Official_Emmi@outlook.com" },
+    "bundleId": { "const": "com.ncom.ai" },
+    "github": { "const": "https://github.com/pfn000/NCOM-AI" },
+    "appleStoreId": { "type": "string", "description": "Assigned by App Store Connect; keep NOT GIVEN YET until assigned." },
+    "appStoreURL": { "type": "string", "description": "Assigned after the App Store record becomes available." }
+  },
+  "required": ["name", "developer", "masterFoundation", "masterFoundationOwner", "version", "legalStatus", "legalTag", "bulletId", "contact", "bundleId", "github", "appleStoreId"]
+}

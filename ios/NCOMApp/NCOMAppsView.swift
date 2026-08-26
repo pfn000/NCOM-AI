@@ -41,7 +41,9 @@ final class NCOMAppLibrary: ObservableObject {
 struct NCOMAppsView: View {
     @EnvironmentObject private var models: NCOMLocalModelManager
     @StateObject private var library = NCOMAppLibrary()
+    @StateObject private var programs = NCOMProgramStore()
     @State private var showBuilder = false
+    @State private var showPrograms = false
     @State private var selectedApp: NCOMAppItem?
     private let columns = Array(repeating: GridItem(.flexible(minimum: 0), spacing: 12), count: 3)
 
@@ -49,6 +51,18 @@ struct NCOMAppsView: View {
         NavigationStack {
             ScrollView {
                 LazyVGrid(columns: columns, spacing: 14) {
+                    Button { showPrograms = true } label: {
+                        VStack(spacing: 9) {
+                            ZStack(alignment: .topTrailing) {
+                                RoundedRectangle(cornerRadius: 24, style: .continuous).fill(.regularMaterial)
+                                Image(systemName: "shippingbox.fill").font(.system(size: 28, weight: .medium))
+                                Circle().fill(.green).frame(width: 9, height: 9).padding(9)
+                            }.aspectRatio(1, contentMode: .fit)
+                            Text("Programs").font(.system(.footnote, design: .rounded).weight(.semibold))
+                            Text("VM apps & jobs").font(.caption2).foregroundStyle(.secondary)
+                        }
+                    }.buttonStyle(.plain)
+
                     ForEach(library.apps) { app in
                         Button { selectedApp = app } label: { NCOMAppTile(app: app) }.buttonStyle(.plain)
                     }
@@ -63,6 +77,7 @@ struct NCOMAppsView: View {
             .navigationTitle("NCOM Apps")
             .sheet(item: $selectedApp) { app in NCOMAppDestination(app: app).environmentObject(models) }
             .sheet(isPresented: $showBuilder) { NCOMAppBuilderView(library: library) }
+            .sheet(isPresented: $showPrograms) { NavigationStack { NCOMProgramsView().environmentObject(programs) } }
         }
     }
 }

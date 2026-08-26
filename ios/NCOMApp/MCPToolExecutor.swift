@@ -5,25 +5,27 @@ struct MCPToolCallResult: Sendable, Codable {
     let result: [String: AnyCodable]
 }
 
-struct AnyCodable: Codable, Sendable {
+struct AnyCodable: Codable, @unchecked Sendable {
     let value: Any
 
     init(_ value: Any) { self.value = value }
 
     init(from decoder: Decoder) throws {
-        if let container = try? decoder.singleValueContainer() {
-            if let value = try? container.decode(String.self) { self.value = value; return }
-            if let value = try? container.decode(Bool.self) { self.value = value; return }
-            if let value = try? container.decode(Double.self) { self.value = value; return }
-            if let value = try? container.decode([AnyCodable].self) { self.value = value.map(\.value); return }
-            if let value = try? container.decode([String: AnyCodable].self) { self.value = value.mapValues(\.value); return }
-        }
-        self.value = NSNull()
+        let container = try decoder.singleValueContainer()
+        if container.decodeNil() { value = NSNull() }
+        else if let value = try? container.decode(String.self) { self.value = value }
+        else if let value = try? container.decode(Bool.self) { self.value = value }
+        else if let value = try? container.decode(Int.self) { self.value = value }
+        else if let value = try? container.decode(Double.self) { self.value = value }
+        else if let value = try? container.decode([AnyCodable].self) { self.value = value.map(\.value) }
+        else if let value = try? container.decode([String: AnyCodable].self) { self.value = value.mapValues(\.value) }
+        else { value = NSNull() }
     }
 
     func encode(to encoder: Encoder) throws {
         var container = encoder.singleValueContainer()
         switch value {
+        case is NSNull: try container.encodeNil()
         case let value as String: try container.encode(value)
         case let value as Bool: try container.encode(value)
         case let value as Int: try container.encode(value)
@@ -42,9 +44,7 @@ final class MCPToolExecutor: ObservableObject {
 
     private let session: URLSession
 
-    init(session: URLSession = .shared) {
-        self.session = session
-    }
+    init(session: URLSession = .shared) { self.session = session }
 
     func callTool(endpoint: URL, toolName: String, arguments: [String: Any]) async -> NCOMToolResult {
         let requestID = UUID().uuidString
@@ -57,18 +57,13 @@ final class MCPToolExecutor: ObservableObject {
             "jsonrpc": "2.0",
             "id": requestID,
             "method": "tools/call",
-            "params": [
-                "name": toolName,
-                "arguments": arguments
-            ]
+            "params": ["name": toolName, "arguments": arguments]
         ]
 
         do {
             request.httpBody = try JSONSerialization.data(withJSONObject: payload)
             let (data, response) = try await session.data(for: request)
-            guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) else {
-                throw URLError(.badServerResponse)
-            }
+            guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) else { throw URLError(.badServerResponse) }
             guard let json = try JSONSerialization.jsonObject(with: data) as? [String: Any] else {
                 throw NSError(domain: "NCOM.MCP", code: 1, userInfo: [NSLocalizedDescriptionKey: "MCP endpoint returned invalid JSON."])
             }
@@ -79,10 +74,10 @@ final class MCPToolExecutor: ObservableObject {
             let encoded = try JSONSerialization.data(withJSONObject: result)
             let pretty = String(data: encoded, encoding: .utf8) ?? "{}"
             lastError = nil
-            return .success(toolID: "mcp.\(toolName)", output: pretty, metadata: ["transport": "HTTP JSON-RPC", "endpoint": endpoint.absoluteString])
+            return NCOMToolResult(toolID: "mcp.\(toolName)", summary: pretty, fields: ["transport": "HTTP JSON-RPC", "endpoint": endpoint.absoluteString])
         } catch {
             lastError = error.localizedDescription
-            return .failure(toolID: "mcp.\(toolName)", output: error.localizedDescription, metadata: ["endpoint": endpoint.absoluteString])
+            return NCOMToolResult(toolID: "mcp.\(toolName)", summary: error.localizedDescription, fields: ["endpoint": endpoint.absoluteString])
         }
     }
 }

@@ -1,0 +1,26 @@
+import XCTest
+
+final class NCOMAIUITests: XCTestCase {
+    func testNCOMPrimarySurface() {
+        let app = XCUIApplication()
+        app.launchArguments += ["UI_TESTING"]
+        app.launch()
+
+        XCTAssertTrue(app.staticTexts["NCOM AI"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["Apple Foundation Models + NCOM Engine"].exists)
+        XCTAssertTrue(app.staticTexts["COGNITIVE HEADER"].exists)
+        XCTAssertTrue(app.staticTexts["NCOM CONVERSATION"].exists)
+        XCTAssertTrue(app.textFields["chatInput"].exists)
+        XCTAssertTrue(app.buttons["sendButton"].exists)
+    }
+
+    func testChatInputAcceptsText() {
+        let app = XCUIApplication()
+        app.launch()
+        let input = app.textFields["chatInput"]
+        XCTAssertTrue(input.waitForExistence(timeout: 5))
+        input.tap()
+        input.typeText("Hello NCOM")
+        XCTAssertEqual(input.value as? String, "Hello NCOM")
+    }
+}

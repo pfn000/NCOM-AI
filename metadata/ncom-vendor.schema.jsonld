@@ -1,0 +1,38 @@
+{
+  "@context": "https://schema.org",
+  "@type": ["Organization", "SoftwareApplication"],
+  "name": "NCOM AI",
+  "alternateName": "NCOM",
+  "description": "A private-development personal AI computing and engineering environment.",
+  "applicationCategory": "DeveloperApplication",
+  "operatingSystem": "iOS, iPadOS, macOS, Linux",
+  "softwareVersion": "0.1.0",
+  "creator": {
+    "@type": "Person",
+    "name": "Saidie Quinn Newara"
+  },
+  "publisher": {
+    "@type": "Organization",
+    "name": "NCOM Playground",
+    "parentOrganization": {
+      "@type": "Organization",
+      "name": "NCOM Systems"
+    }
+  },
+  "copyrightNotice": "(c)2025 NCOM Systems PRIVATE PROPERTY",
+  "contactPoint": {
+    "@type": "ContactPoint",
+    "contactType": "developer support",
+    "email": "Official_Emmi@outlook.com"
+  },
+  "sameAs": [
+    "https://github.com/pfn000/NCOM-AI"
+  ],
+  "identifier": "NCO: Playground08.26.26JENAAIios",
+  "url": "https://github.com/pfn000/NCOM-AI",
+  "additionalProperty": [
+    { "@type": "PropertyValue", "name": "Legal Status", "value": "NOT FOR PUBLIC RELEASE" },
+    { "@type": "PropertyValue", "name": "Apple Bundle ID", "value": "com.ncom.ai" },
+    { "@type": "PropertyValue", "name": "Apple Store ID", "value": "NOT GIVEN YET" }
+  ]
+}

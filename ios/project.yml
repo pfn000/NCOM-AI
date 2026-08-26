@@ -40,6 +40,8 @@ targets:
         - CFBundleTypeRole: Editor
           CFBundleURLSchemes:
             - com.ncom.ai
+      NSAppTransportSecurity:
+        NSAllowsLocalNetworking: true
   NCOMAIUITests:
     type: bundle.ui-testing
     platform: iOS

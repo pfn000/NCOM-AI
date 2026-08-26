@@ -12,8 +12,7 @@ struct NCOMToolRouter: Sendable {
     }
 
     func snapshot() -> Snapshot {
-        let nativeTools = NCOMNativeToolRegistry.shared.names
-        return Snapshot(
+        Snapshot(
             runtime: "NCOM Engine / iOS",
             appVersion: "0.1.0",
             primaryWorkspace: "NCOM Desktop VM",
@@ -30,11 +29,11 @@ struct NCOMToolRouter: Sendable {
                 "Bonjour / local discovery",
                 "BLE device discovery"
             ],
-            nativeTools: nativeTools
+            nativeTools: NCOMToolRegistry.shared.names
         )
     }
 
     func executeNativeTool(id: String, input: String) async -> NCOMToolResult {
-        await NCOMNativeToolRegistry.shared.execute(id: id, input: input)
+        await NCOMToolRegistry.shared.execute(id: id, input: input)
     }
 }

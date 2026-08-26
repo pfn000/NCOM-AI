@@ -20,5 +20,23 @@ targets:
         INFOPLIST_KEY_NSLocalNetworkUsageDescription: NCOM uses your local network to connect to an optional NCOM desktop runtime.
         TARGETED_DEVICE_FAMILY: '1,2'
         GENERATE_INFOPLIST_FILE: YES
-    scheme:
-      testTargets: []
+  NCOMAIUITests:
+    type: bundle.ui-testing
+    platform: iOS
+    sources:
+      - path: NCOMAppUITests
+    dependencies:
+      - target: NCOMAI
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.ncom.ai.UITests
+        GENERATE_INFOPLIST_FILE: YES
+schemes:
+  NCOMAI:
+    build:
+      targets:
+        NCOMAI: all
+        NCOMAIUITests: [test]
+    test:
+      targets:
+        - target: NCOMAIUITests

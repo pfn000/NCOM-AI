@@ -29,11 +29,10 @@ jobs:
           test -f web/index.html
           test -f web/app.js
           test -f web/styles.css
+          test -f ios/project.yml
           test -f ios/NCOMApp/NCOMApp.swift
           test -d mcp
           test -d skills
-          test -d integrations
-          test -d vm
       - name: Compile Python clients
         run: python -m py_compile desktop/ncom_desktop.py core/ncom_server.py
       - name: Run core tests

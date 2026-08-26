@@ -1,7 +1,6 @@
 import Foundation
 import Network
 
-/// Native tool contract used by NCOM's iOS Tool Router.
 protocol NCOMNativeTool: Sendable {
     var id: String { get }
     var name: String { get }
@@ -16,8 +15,6 @@ struct NCOMToolResult: Sendable, Codable, Equatable {
     let fields: [String: String]
 }
 
-/// Real, asynchronous DNS + RDAP + optional IP-geolocation tool.
-/// It intentionally uses public services and performs no credentialed collection.
 struct NCOMOSINTTool: NCOMNativeTool {
     let id = "osint"
     let name = "NCOM OSINT"
@@ -109,5 +106,11 @@ struct NCOMToolRegistry: Sendable {
     static let shared = NCOMToolRegistry(tools: [NCOMOSINTTool()])
     let tools: [any NCOMNativeTool]
     init(tools: [any NCOMNativeTool]) { self.tools = tools }
+    var names: [String] { tools.map(\.name).sorted() }
     func tool(id: String) -> (any NCOMNativeTool)? { tools.first { $0.id == id } }
+    func execute(id: String, input: String) async -> NCOMToolResult {
+        guard let tool = tool(id: id) else { return NCOMToolResult(toolID: id, summary: "Tool not found", fields: [:]) }
+        do { return try await tool.execute(input: input) }
+        catch { return NCOMToolResult(toolID: id, summary: error.localizedDescription, fields: ["error": error.localizedDescription]) }
+    }
 }

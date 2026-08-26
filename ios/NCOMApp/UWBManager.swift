@@ -40,11 +40,7 @@ final class UWBManager: NSObject, ObservableObject {
         let session = NISession()
         session.delegate = self
         niSession = session
-        if session.discoveryToken != nil {
-            sessionState = "Ready"
-        } else {
-            sessionState = "Waiting for discovery token"
-        }
+        sessionState = session.discoveryToken == nil ? "Waiting for discovery token" : "Ready"
     }
 
     func start() {
@@ -54,9 +50,10 @@ final class UWBManager: NSObject, ObservableObject {
 
     func stop() {
         centralManager?.stopScan()
-        connectedPeripheral.map { centralManager?.cancelPeripheralConnection($0) }
+        if let connectedPeripheral { centralManager?.cancelPeripheralConnection(connectedPeripheral) }
         connectedPeripheral = nil
         tokenCharacteristic = nil
+        discoveredToken = nil
         discoveredPeers.removeAll()
         niSession?.invalidate()
         sessionState = NISession.isSupported ? "Stopped" : "UWB not supported on this device"
@@ -76,16 +73,17 @@ final class UWBManager: NSObject, ObservableObject {
 
     private func startAdvertising() {
         guard peripheralManager.state == .poweredOn else { return }
-        let characteristic = CBMutableCharacteristic(
-            type: tokenCharacteristicUUID,
-            properties: [.read],
-            value: nil,
-            permissions: [.readable]
-        )
-        localCharacteristic = characteristic
-        let service = CBMutableService(type: serviceUUID, primary: true)
-        service.characteristics = [characteristic]
-        peripheralManager.add(service)
+        if localCharacteristic == nil {
+            localCharacteristic = CBMutableCharacteristic(
+                type: tokenCharacteristicUUID,
+                properties: [.read],
+                value: nil,
+                permissions: [.readable]
+            )
+            let service = CBMutableService(type: serviceUUID, primary: true)
+            service.characteristics = [localCharacteristic!]
+            peripheralManager.add(service)
+        }
         peripheralManager.startAdvertising([CBAdvertisementDataServiceUUIDsKey: [serviceUUID]])
     }
 
@@ -147,8 +145,7 @@ extension UWBManager: CBPeripheralManagerDelegate {
         Task { @MainActor in
             guard request.characteristic.uuid == tokenCharacteristicUUID,
                   let token = niSession?.discoveryToken,
-                  let data = archiveToken(token),
-                  data.count <= peripheral.maximumUpdateValueLength else {
+                  let data = archiveToken(token) else {
                 peripheral.respond(to: request, withResult: .requestNotSupported)
                 return
             }
@@ -158,8 +155,6 @@ extension UWBManager: CBPeripheralManagerDelegate {
     }
 
     nonisolated func peripheralManager(_ peripheral: CBPeripheralManager, didReceiveWrite requests: [CBATTRequest]) {
-        // The NCOM UWB transport is read-token based. Writes are intentionally rejected
-        // until an authenticated accessory protocol is added.
         for request in requests {
             peripheral.respond(to: request, withResult: .writeNotPermitted)
         }
@@ -169,8 +164,12 @@ extension UWBManager: CBPeripheralManagerDelegate {
 extension UWBManager: CBCentralManagerDelegate {
     nonisolated func centralManagerDidUpdateState(_ central: CBCentralManager) {
         Task { @MainActor in
-            if central.state == .poweredOn { startScanning() }
-            else { sessionState = "Bluetooth unavailable" }
+            if central.state == .poweredOn {
+                startScanning()
+                startAdvertising()
+            } else {
+                sessionState = "Bluetooth unavailable"
+            }
         }
     }
 
@@ -178,7 +177,11 @@ extension UWBManager: CBCentralManagerDelegate {
         Task { @MainActor in
             let name = peripheral.name ?? (advertisementData[CBAdvertisementDataLocalNameKey] as? String) ?? "NCOM UWB peer"
             let peer = Peer(id: peripheral.identifier, peripheral: peripheral, name: name, rssi: RSSI.intValue)
-            if !discoveredPeers.contains(where: { $0.id == peer.id }) { discoveredPeers.append(peer) }
+            if let existingIndex = discoveredPeers.firstIndex(where: { $0.id == peer.id }) {
+                discoveredPeers[existingIndex] = peer
+            } else {
+                discoveredPeers.append(peer)
+            }
         }
     }
 
@@ -219,7 +222,8 @@ extension UWBManager: CBPeripheralDelegate {
 
     nonisolated func peripheral(_ peripheral: CBPeripheral, didDiscoverCharacteristicsFor service: CBService, error: Error?) {
         Task { @MainActor in
-            guard error == nil, let characteristic = service.characteristics?.first(where: { $0.uuid == tokenCharacteristicUUID }) else {
+            guard error == nil,
+                  let characteristic = service.characteristics?.first(where: { $0.uuid == tokenCharacteristicUUID }) else {
                 sessionState = "Token characteristic unavailable"
                 return
             }

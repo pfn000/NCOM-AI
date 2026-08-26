@@ -1,0 +1,32 @@
+name: NCOM CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate repository layout
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f README.md
+          test -f ARCHITECTURE.md
+          test -f DEV-DIARY.md
+          test -f .coderabbit.yaml
+          test -d core
+          test -d mcp
+          test -d skills
+          test -d integrations
+          test -d vm
+          test -d desktop
+          test -d web
+          test -d ios
+          echo 'NCOM repository scaffold validated.'

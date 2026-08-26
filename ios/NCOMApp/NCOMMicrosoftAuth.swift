@@ -3,7 +3,7 @@ import AuthenticationServices
 import CryptoKit
 import Security
 
-final class NCOMKeychain {
+final class NCOMKeychain: @unchecked Sendable {
     static let shared = NCOMKeychain()
     private init() {}
     func save(_ value: Data, key: String) {

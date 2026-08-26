@@ -10,10 +10,7 @@ final class NCOMIntentCoordinator {
 
     func runAgent(name: String, task: String) {
         lastAction = "Agent \(name) requested: \(task)"
-        NotificationCenter.default.post(name: .ncomAgentRequested, object: nil, userInfo: [
-            "agent": name,
-            "task": task
-        ])
+        NotificationCenter.default.post(name: .ncomAgentRequested, object: nil, userInfo: ["agent": name, "task": task])
     }
 
     func statusSummary() -> String {
@@ -27,15 +24,12 @@ extension Notification.Name {
 }
 
 struct RunAgentIntent: AppIntent {
-    static var title: LocalizedStringResource = "Run NCOM Agent"
-    static var description = IntentDescription("Start an NCOM agent task through the local NCOM Engine.")
-    static var openAppWhenRun = false
+    static let title: LocalizedStringResource = "Run NCOM Agent"
+    static let description = IntentDescription("Start an NCOM agent task through the local NCOM Engine.")
+    static let openAppWhenRun = false
 
-    @Parameter(title: "Agent Name")
-    var agentName: String
-
-    @Parameter(title: "Task")
-    var task: String
+    @Parameter(title: "Agent Name") var agentName: String
+    @Parameter(title: "Task") var task: String
 
     func perform() async throws -> some IntentResult & ProvidesDialog {
         await NCOMIntentCoordinator.shared.runAgent(name: agentName, task: task)
@@ -44,9 +38,9 @@ struct RunAgentIntent: AppIntent {
 }
 
 struct CheckNCOMStatusIntent: AppIntent {
-    static var title: LocalizedStringResource = "Check NCOM Status"
-    static var description = IntentDescription("Read the current NCOM runtime and model status.")
-    static var openAppWhenRun = false
+    static let title: LocalizedStringResource = "Check NCOM Status"
+    static let description = IntentDescription("Read the current NCOM runtime and model status.")
+    static let openAppWhenRun = false
 
     func perform() async throws -> some IntentResult & ProvidesDialog {
         let summary = await NCOMIntentCoordinator.shared.statusSummary()
@@ -55,25 +49,23 @@ struct CheckNCOMStatusIntent: AppIntent {
 }
 
 struct ListNCOMToolsIntent: AppIntent {
-    static var title: LocalizedStringResource = "List NCOM Tools"
-    static var description = IntentDescription("List tools currently registered with NCOM.")
-    static var openAppWhenRun = false
+    static let title: LocalizedStringResource = "List NCOM Tools"
+    static let description = IntentDescription("List tools currently registered with NCOM.")
+    static let openAppWhenRun = false
 
     func perform() async throws -> some IntentResult & ProvidesDialog {
-        let tools = NCOMNativeToolRegistry.shared.names.joined(separator: ", ")
+        let tools = NCOMToolRegistry.shared.names.joined(separator: ", ")
         let text = tools.isEmpty ? "No native NCOM tools are currently registered." : "NCOM tools: \(tools)."
         return .result(dialog: LocalizedStringResource(stringLiteral: text))
     }
 }
 
 struct OpenNCOMChatIntent: AppIntent {
-    static var title: LocalizedStringResource = "Open NCOM Chat"
-    static var description = IntentDescription("Open the normal NCOM AI chat interface.")
-    static var openAppWhenRun = true
+    static let title: LocalizedStringResource = "Open NCOM Chat"
+    static let description = IntentDescription("Open the normal NCOM AI chat interface.")
+    static let openAppWhenRun = true
 
-    func perform() async throws -> some IntentResult {
-        return .result()
-    }
+    func perform() async throws -> some IntentResult { .result() }
 }
 
 struct NCOMAppShortcuts: AppShortcutsProvider {

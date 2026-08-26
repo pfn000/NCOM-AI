@@ -2,26 +2,85 @@ name: NCOM Release
 
 on:
   workflow_dispatch:
+    inputs:
+      version:
+        description: 'Release version without the v prefix'
+        required: true
+        default: '0.1.0'
   push:
-    tags:
-      - 'v*.*.*'
+    tags: ['v*.*.*']
 
 permissions:
   contents: write
 
 jobs:
-  release:
+  linux:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Package source manifest
-        shell: bash
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Build Linux executable
+        run: |
+          python -m pip install --disable-pip-version-check --no-input pyinstaller
+          pyinstaller --onefile --name ncom-ai-linux-x86_64 core/ncom_server.py
+          chmod +x dist/ncom-ai-linux-x86_64
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ncom-ai-linux-x86_64
+          path: dist/ncom-ai-linux-x86_64
+
+  web:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build web bundle
+        run: |
+          mkdir -p dist/web
+          cp web/index.html web/app.js web/styles.css dist/web/
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ncom-ai-web
+          path: dist/web
+
+  ios:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Package iOS source
+        run: |
+          mkdir -p dist
+          tar -czf dist/NCOM-AI-iOS.tar.gz ios/NCOMApp ios/README.md
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ncom-ai-ios-source
+          path: dist/NCOM-AI-iOS.tar.gz
+
+  release:
+    needs: [linux, web, ios]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+      - name: Flatten release assets
         run: |
           set -euo pipefail
-          mkdir -p dist
-          tar --exclude=.git --exclude=dist -czf dist/ncom-ai-source-${GITHUB_SHA}.tar.gz .
-      - name: Publish release artifacts
+          mkdir -p release
+          cp dist/ncom-ai-linux-x86_64/ncom-ai-linux-x86_64 release/
+          tar -czf release/ncom-ai-web.tar.gz -C dist/ncom-ai-web .
+          cp dist/ncom-ai-ios-source/NCOM-AI-iOS.tar.gz release/
+          tar --exclude=.git --exclude=dist --exclude=release -czf release/ncom-ai-source-${GITHUB_SHA}.tar.gz .
+      - name: Publish GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          files: dist/*
+          tag_name: ${{ github.ref_type == 'tag' && github.ref_name || format('v{0}', inputs.version) }}
+          name: NCOM AI ${{ github.ref_type == 'tag' && github.ref_name || format('v{0}', inputs.version) }}
           generate_release_notes: true
+          files: |
+            release/ncom-ai-linux-x86_64
+            release/ncom-ai-web.tar.gz
+            release/NCOM-AI-iOS.tar.gz
+            release/ncom-ai-source-${{ github.sha }}.tar.gz

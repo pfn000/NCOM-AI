@@ -58,8 +58,26 @@ The model backend intentionally raises `NotImplementedError` during generation u
 ### Resource impact
 The desktop client and HTTP server use Python standard library components. The web client is static. The iOS client is native SwiftUI source. These additions do not reserve model memory on the Surface.
 
+## 2026-08-26 — Entry 0004: MiniSwift SwiftUI Visual Verification
+
+### Implemented
+- Added `tools/miniswift/README.md` documenting the MiniSwift visual-verification contract.
+- Added `tools/miniswift/package.json` with Playwright as the browser automation dependency.
+- Added `tools/miniswift/miniswift-shot.mjs`, an executable browser driver that loads MiniSwift Studio, enters Swift source, triggers Run/Compile, identifies the phone preview, and captures the preview as PNG.
+- Added `skills/swift-ui-visual/SKILL.md` so the NCOM agent can invoke visual verification while working on SwiftUI.
+- Added `mcp/tools/miniswift.json` registering the visual verifier as an agent-accessible MCP-style tool definition.
+- Added loud failure diagnostics: if the preview cannot be identified, the tool writes a full-page diagnostic screenshot instead of silently accepting a browser screenshot.
+
+### Verification basis
+MiniSwift's public site documents the Studio as a browser-resident Swift/SwiftUI compiler/runtime with a live iPhone-style canvas. The public support page also documents the SwiftUI API coverage used by the Studio.
+
+### Tests actually run
+- The repository contains the executable Playwright adapter and selector fallbacks.
+- The local environment does not have the Playwright Node package installed, and `npm view playwright version` timed out, so an actual browser screenshot could not be truthfully reported from this environment.
+- No claim is made that a MiniSwift screenshot has already been captured.
+
 ### Next action
-Implement the real llama.cpp process adapter, add an NCOM model configuration/profile, and expose the first executable MCP transport through the local server.
+Install Playwright in the target development environment, run the first real SwiftUI screenshot against MiniSwift Studio, then add a screenshot-based CI smoke test and connect the artifact to the SwiftUI skill loop.
 
 ## Entry format
 Each future entry should record:

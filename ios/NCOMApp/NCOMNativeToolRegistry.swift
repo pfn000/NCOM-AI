@@ -22,26 +22,32 @@ struct NCOMToolResult: Sendable, Codable {
     }
 }
 
-@MainActor
-final class NCOMNativeToolRegistry: ObservableObject {
+final class NCOMNativeToolRegistry: @unchecked Sendable {
     static let shared = NCOMNativeToolRegistry()
-    @Published private(set) var tools: [any NCOMNativeTool] = []
+
+    private let lock = NSLock()
+    private var storage: [String: any NCOMNativeTool] = [:]
 
     private init() {
-        register(RealOSINTTool())
+        storage["osint"] = RealOSINTTool()
     }
 
-    var names: [String] { tools.map(\.name).sorted() }
+    var names: [String] {
+        lock.lock(); defer { lock.unlock() }
+        return storage.values.map(\.name).sorted()
+    }
 
     func register(_ tool: any NCOMNativeTool) {
-        tools.removeAll { $0.id == tool.id }
-        tools.append(tool)
+        lock.lock(); defer { lock.unlock() }
+        storage[tool.id] = tool
     }
 
     func execute(id: String, input: String) async -> NCOMToolResult {
-        guard let tool = tools.first(where: { $0.id == id }) else {
-            return .failure(toolID: id, output: "Tool not found")
-        }
+        let tool: (any NCOMNativeTool)? = {
+            lock.lock(); defer { lock.unlock() }
+            return storage[id]
+        }()
+        guard let tool else { return .failure(toolID: id, output: "Tool not found") }
         return await tool.execute(input: input)
     }
 }

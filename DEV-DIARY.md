@@ -83,34 +83,60 @@ MiniSwift's public site documents the Studio as a browser-resident Swift/SwiftUI
 - The local environment still does not have the Playwright Node package installed, so an actual browser screenshot has not been claimed from this environment.
 - The provided MiniSwift log demonstrates a successful build (`Build succeeded · 3 view(s)`); it does not demonstrate screenshot capture.
 
-## 2026-08-26 — Entry 0005: iOS NCOM identity, execution shell, and desktop expansion
+### Next action
+Install Playwright in the target development environment, run the first real SwiftUI screenshot against MiniSwift Studio, inspect the captured screenshot, and add the resulting screenshot smoke test to CI.
+
+## 2026-08-26 — Entry 0005: iOS identity, execution shell, and VM/Desktop expansion
 
 ### Implemented
 - Added the supplied NCOM project identity metadata to `NCOMAboutView`, including developer, master foundation, owner, legal/private-development status, bullet ID, contact, trust versions, and development-device information.
 - Added an owner profile screen with editable display name/role while deliberately excluding device identifiers and signing secrets.
 - Added an About button and activity button to the iOS application's top-level UI.
 - Reworked the iOS application shell so Apple Foundation Models are treated as the cognitive header and the NCOM Engine/Tool Router remain the execution boundary.
-- Added a live desktop/VM activity surface that can consume real `/v1/activity` and `/v1/display/screenshot` data when an optional desktop runtime is connected. The iOS client explicitly reports an unavailable feed instead of displaying fake desktop state.
+- Added a live Desktop/VM activity surface that consumes real activity/screenshot endpoints when an optional runtime is connected. NCOM Desktop is explicitly the **internal VM/workspace by default**; the physical PC host is an optional expansion source.
 - Added authenticated desktop-feed support with `X-NCOM-Feed-Token`.
 - Added server-side `/v1/activity` and `/v1/display/screenshot` endpoints. Screenshot capture uses the Wayland `grim` utility when installed.
 - Changed the intended iOS bundle identifier to `com.ncom.ai` and updated the simulator workflow to launch that identifier.
 - Added iOS signing/distribution documentation covering Personal Team, Developer Program, Ad Hoc, TestFlight, App Store, and GitHub Actions.
-- Added Schema.org vendor metadata and a canonical project metadata schema with the GitHub repository link and an explicit placeholder for the future Apple Store ID.
+- Added Schema.org vendor metadata and canonical project metadata with the GitHub repository link and a placeholder for the future Apple Store ID.
 
 ### Verification
-- GitHub's previous iOS pipeline successfully built the native SwiftUI app, booted an iPhone Simulator, installed/launched the app, captured a screenshot, and uploaded the `.app` and screenshot artifacts.
-- The new Foundation Models/Engine commit also completed the GitHub iOS build pipeline successfully before this additional desktop-feed/identity work.
-- The latest changes are intended to trigger another iOS pipeline run through the existing `ios/**` path trigger. A fresh screenshot must be tied to that exact commit before it is treated as visual verification of this revision.
+- GitHub's prior iOS pipeline successfully built the native SwiftUI app, booted an iPhone Simulator, installed/launched the app, captured a screenshot, and uploaded the `.app` and screenshot artifacts.
+- The Foundation Models/Engine commit also completed the GitHub iOS build pipeline successfully before the later multi-GGUF changes.
+- Fresh verification screenshots must always be tied to the exact head commit that produced them.
 
 ### Signing decision
-Apple code signing/provisioning will not be bypassed. Supported paths are used instead: Xcode Personal Team for personal-device development, Apple Developer Program signing for device distribution, and TestFlight/App Store through App Store Connect. Apple's current documentation states that Personal Team provisioning is limited/temporary and that TestFlight distribution requires an Apple Developer Program/App Store Connect workflow.
+Apple code signing/provisioning will not be bypassed. Supported paths are used instead: Xcode Personal Team for personal-device development, Apple Developer Program signing for device distribution, and TestFlight/App Store through App Store Connect.
 
 ### Unresolved work
 - Complete native Foundation Models tool coverage beyond the current runtime-status tool.
-- Replace the temporary desktop feed contract with a full NCOM desktop activity/event publisher for coding, builds, and VM state.
+- Replace the temporary desktop feed contract with a full NCOM Desktop VM activity/event publisher for coding, builds, and VM state.
 - Add secure pairing flow that provisions the desktop feed token without manual copying.
 - Add signed-device/TestFlight automation once the Apple developer account and App Store Connect identifiers are available.
-- Add the final app icon assets derived from the `ᵔ-ᵔ` identity.
+- Add final app icon assets derived from the `ᵔ-ᵔ` identity.
+
+## 2026-08-26 — Entry 0006: Multi-GGUF Model Lab
+
+### Implemented
+- Added a curated NCOM GGUF catalog with the user-selected Hermes 3.6 Genesis model and vision projector, Lily Cybersecurity 7B Q2_K, Qwen2.5-Coder 7B Q4_K_M, Qwen3-VL 4B Q4_K_M and vision projector, and Devstral Small 2 24B Q4_K_M plus vision projector metadata.
+- Added direct Hugging Face download URLs and source repository links to the in-app catalog.
+- Added a shared Model Lab that uses the same `NCOMLocalModelManager` instance as Chat/Engine instead of maintaining a second hidden model registry.
+- Added GGUF import from the iOS Files picker, direct `.gguf` downloading, role assignment, load/unload controls, concurrent-model execution, memory-budget enforcement, and model activity reporting.
+- Added explicit warnings/metadata for very large models rather than pretending they are phone-ready.
+- Added multi-GGUF orchestration UI that runs loaded models concurrently and returns separate model-labeled results for comparison/synthesis by the NCOM Engine.
+- Kept multimodal projector files visible in the catalog metadata but did not incorrectly treat them as standalone language models.
+
+### Verified external model information
+- The selected Hermes 3.6 Genesis repository is currently tagged as multimodal, vision, MoE, agentic, function-calling-oriented, and Apache-2.0 in its Hugging Face metadata.
+- Qwen2.5-Coder 7B has an official GGUF repository with multiple quantizations, including Q4_K_M.
+- Qwen3-VL 4B Instruct has an official GGUF repository with Q4_K_M and a separate vision projector.
+- Devstral Small 2 24B has official/major GGUF distributions, including Q4_K_M and separate vision projectors; the model is desktop-class by size.
+
+### Design decision
+Large GGUF files are **catalogued and downloadable**, not blindly bundled into the iOS application binary. This keeps the application itself manageable and allows device-aware selection.
+
+### Important implementation note
+The current iOS model manager exposes a real llama.cpp-backed loading contract through `mattt/llama.swift`. Actual inference on a device still depends on the final linked llama.cpp build and device memory. Multi-model execution is therefore represented as concurrent independent model contexts, not as a claim that the models have magically merged weights.
 
 ## Entry format
 Each future entry should record:

@@ -107,7 +107,7 @@ struct ContentView: View {
                     }
                     .padding(.horizontal, 16)
                     .padding(.top, 12)
-                    .padding(.bottom, 12)
+                    .safeAreaPadding(.bottom, 12)
                 }
                 .scrollIndicators(.hidden)
             }
@@ -126,7 +126,6 @@ struct ContentView: View {
             .sheet(isPresented: $showSettings) { NavigationStack { NCOMSettingsView(endpoint: $endpoint) } }
         }
         .preferredColorScheme(.dark)
-        .task { await engine.refreshAvailability() }
     }
 
     private var header: some View {
@@ -157,11 +156,7 @@ struct ContentView: View {
                     }
                     Spacer()
                 }
-                HStack(spacing: 8) {
-                    chip("On device")
-                    chip("Private")
-                    chip("NCOM tools")
-                }
+                HStack(spacing: 8) { chip("On device"); chip("Private"); chip("NCOM tools") }
             }
         }
     }
@@ -267,6 +262,7 @@ struct NCOMActivityView: View {
 struct NCOMSettingsView: View {
     @Binding var endpoint: String
     @State private var showAbout = false
+    @State private var showProfile = false
     var body: some View {
         Form {
             Section("Desktop expansion") {
@@ -281,9 +277,18 @@ struct NCOMSettingsView: View {
                 LabeledContent("Build", value: "0.1.0")
                 LabeledContent("Distribution", value: "Private development")
                 Button("About NCOM") { showAbout = true }
+                Button("Owner Profile") { showProfile = true }
             }
         }
         .navigationTitle("Settings")
         .sheet(isPresented: $showAbout) { NavigationStack { NCOMAboutView() } }
+        .sheet(isPresented: $showProfile) { NavigationStack { NCOMProfileView() } }
     }
+}
+
+private struct Message: Identifiable, Equatable {
+    let id = UUID()
+    let role: Role
+    let content: String
+    enum Role { case user, assistant }
 }

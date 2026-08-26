@@ -23,6 +23,13 @@ def get_json(url: str) -> dict:
         return json.loads(response.read().decode())
 
 
+def publish_activity(endpoint: str, phase: str, detail: str, has_screenshot: bool = False) -> None:
+    post_json(
+        endpoint.rstrip("/") + "/v1/activity",
+        {"phase": phase, "detail": detail, "hasScreenshot": has_screenshot},
+    )
+
+
 class NCOMDesktop(tk.Tk):
     def __init__(self) -> None:
         super().__init__()
@@ -74,6 +81,7 @@ class NCOMDesktop(tk.Tk):
             try:
                 data = get_json(self.endpoint + "/health")
                 self.after(0, lambda: self.status.configure(text=f"ready • {data.get('state', 'unknown')}"))
+                publish_activity(self.endpoint, "Idle", "NCOM Desktop is connected and ready")
             except Exception as exc:
                 self.after(0, lambda: self.status.configure(text="offline"))
                 self.after(0, lambda: self.write(f"Health check failed: {exc}"))
@@ -88,10 +96,16 @@ class NCOMDesktop(tk.Tk):
 
         def run() -> None:
             try:
+                publish_activity(self.endpoint, "Running", f"Processing: {message[:140]}")
                 data = post_json(self.endpoint + "/v1/chat", {"messages": [{"role": "user", "content": message}]})
                 reply = data.get("content") or data.get("error") or str(data)
+                publish_activity(self.endpoint, "Idle", "NCOM Desktop is ready")
             except Exception as exc:
                 reply = f"Connection error: {exc}"
+                try:
+                    publish_activity(self.endpoint, "Error", reply)
+                except Exception:
+                    pass
             self.after(0, lambda: self.write(f"NCOM: {reply}"))
 
         threading.Thread(target=run, daemon=True).start()

@@ -2,6 +2,32 @@
 
 NCOM-AI is a local-first agent platform built for constrained CPUs and designed to scale from a Linux desktop to a browser and iOS client.
 
+## 🚀 One-click iOS build & simulator test
+
+### [▶️ BUILD & RUN NCOM-AI iOS](https://github.com/pfn000/NCOM-AI/actions/workflows/ios.yml)
+
+Click that button, then choose **Run workflow**.
+
+GitHub's macOS runner will:
+
+1. Download the NCOM-AI repository.
+2. Generate/open the iOS Xcode project.
+3. Build the native SwiftUI app.
+4. Boot an iPhone Simulator.
+5. Install the app.
+6. Run the UI tests.
+7. Capture the simulator screenshot.
+8. Upload the `.app` and screenshot as downloadable workflow artifacts.
+
+**Important:** GitHub is providing the macOS/Xcode build machine and iOS Simulator. It is not pretending to be a physical iPhone. A physical-device build requires Apple signing/provisioning.
+
+### After the workflow finishes
+
+Open the completed workflow run and look under **Artifacts** for:
+
+- `NCOMAI-iOS-app` — built iOS `.app` bundle.
+- `NCOMAI-iOS-screenshots` — simulator screenshots and test evidence.
+
 ## What exists now
 
 - Python runtime core with explicit lifecycle, memory governance, deterministic tool registry, and GGUF/llama.cpp backend contract.

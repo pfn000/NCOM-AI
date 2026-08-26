@@ -1,0 +1,19 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>NCOM AI</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <main class="shell">
+    <header><div><span class="eyebrow">LOCAL-FIRST AGENT</span><h1>NCOM AI</h1><p>CPU-first local intelligence for desktop, web, and iOS.</p></div><div id="state" class="pill">offline</div></header>
+    <section class="grid">
+      <article class="card chat"><div id="messages" class="messages"></div><form id="chat"><input id="input" autocomplete="off" placeholder="Message the local NCOM runtime…"><button>Send</button></form></article>
+      <aside class="card controls"><h2>Control</h2><label>Runtime endpoint<input id="endpoint" value="http://127.0.0.1:8765"></label><button id="health">Check health</button><a class="button" href="https://github.com/pfn000/NCOM-AI/actions/workflows/release.yml" target="_blank" rel="noreferrer">Build Release Artifact</a><a class="button secondary" href="https://github.com/pfn000/NCOM-AI/releases" target="_blank" rel="noreferrer">Open Releases</a><a class="button secondary" href="https://github.com/pfn000/NCOM-AI" target="_blank" rel="noreferrer">GitHub Repository</a><div class="note">The build button opens GitHub's authenticated workflow page. No token is embedded in this public site.</div></aside>
+    </section>
+  </main>
+  <script src="app.js"></script>
+</body>
+</html>

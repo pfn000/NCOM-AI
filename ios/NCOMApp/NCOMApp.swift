@@ -102,7 +102,15 @@ struct NCOMRootView: View {
                 .tabItem { Label("Desktop", systemImage: "display.2") }.tag(RootTab.desktop)
             NavigationStack {
                 Form {
-                    Section("NCOM") { Button("About NCOM") { showAbout = true }; Button("Owner Profile") { showProfile = true } }
+                    Section("NCOM") {
+                        Button("About NCOM") { showAbout = true }
+                        Button("Owner Profile") { showProfile = true }
+                        NavigationLink {
+                            NCOMIdentityView()
+                        } label: {
+                            Label("Identity & Accounts", systemImage: "person.badge.key.fill")
+                        }
+                    }
                     Section("Model") { Text("Apple Foundation Models is the cognitive header when available. NCOM Engine can fall back to multiple local GGUF models through llama.cpp.").font(.footnote).foregroundStyle(.secondary) }
                 }
                 .navigationTitle("Settings")

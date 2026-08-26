@@ -11,14 +11,9 @@ struct NCOMToolRouter: Sendable {
         let nativeTools: [String]
     }
 
-    private let registry: NCOMToolRegistry
-
-    init(registry: NCOMToolRegistry = .shared) {
-        self.registry = registry
-    }
-
     func snapshot() -> Snapshot {
-        Snapshot(
+        let nativeTools = NCOMNativeToolRegistry.shared.names
+        return Snapshot(
             runtime: "NCOM Engine / iOS",
             appVersion: "0.1.0",
             primaryWorkspace: "NCOM Desktop VM",
@@ -30,16 +25,16 @@ struct NCOMToolRouter: Sendable {
                 "Desktop VM",
                 "VM activity display",
                 "artifact export",
-                "native OSINT DNS/RDAP/IP metadata"
+                "native OSINT DNS/RDAP/IP metadata",
+                "Nearby Interaction UWB",
+                "Bonjour / local discovery",
+                "BLE device discovery"
             ],
-            nativeTools: registry.tools.map(\.name)
+            nativeTools: nativeTools
         )
     }
 
-    func executeNativeTool(id: String, input: String) async throws -> NCOMToolResult {
-        guard let tool = registry.tool(id: id) else {
-            throw NCOMToolError.invalidInput("NCOM native tool '\(id)' is not registered.")
-        }
-        return try await tool.execute(input: input)
+    func executeNativeTool(id: String, input: String) async -> NCOMToolResult {
+        await NCOMNativeToolRegistry.shared.execute(id: id, input: input)
     }
 }

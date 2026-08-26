@@ -3,32 +3,31 @@ import SwiftUI
 @main
 struct NCOMApp: App {
     var body: some Scene {
-        WindowGroup {
-            ContentView()
-        }
+        WindowGroup { ContentView() }
     }
 }
 
-// MARK: - NCOM Liquid Glass Design System
+// MARK: - NCOM Design System
 
-extension CGFloat {
-    static let ncomGlassRadius: CGFloat = 24
+private enum NCOMMetrics {
+    static let glassRadius: CGFloat = 24
+    static let sectionSpacing: CGFloat = 18
 }
 
-struct NCOMLogo: View {
-    var compact = false
+private struct NCOMLogo: View {
+    var size: CGFloat = 30
 
     var body: some View {
         Text("ᵔ-ᵔ")
-            .font(.system(size: compact ? 22 : 30, weight: .semibold, design: .rounded))
+            .font(.system(size: size, weight: .semibold, design: .rounded))
             .foregroundStyle(.primary)
-            .accessibilityLabel("NCOM AI logo")
+            .accessibilityLabel("NCOM AI")
     }
 }
 
-struct NCOMGlass<Content: View>: View {
+private struct NCOMGlassCard<Content: View>: View {
     let content: Content
-    var padding: CGFloat = 16
+    let padding: CGFloat
 
     init(padding: CGFloat = 16, @ViewBuilder content: () -> Content) {
         self.padding = padding
@@ -38,63 +37,66 @@ struct NCOMGlass<Content: View>: View {
     var body: some View {
         content
             .padding(padding)
-            .background {
-                RoundedRectangle(cornerRadius: .ncomGlassRadius, style: .continuous)
-                    .fill(.regularMaterial)
-                    .overlay {
-                        RoundedRectangle(cornerRadius: .ncomGlassRadius, style: .continuous)
-                            .strokeBorder(.white.opacity(0.16), lineWidth: 1)
-                    }
-                    .shadow(color: .black.opacity(0.12), radius: 14, x: 0, y: 7)
-            }
+            .modifier(NCOMGlassSurface())
     }
 }
 
-struct NCOMGlassButtonStyle: ButtonStyle {
+private struct NCOMGlassSurface: ViewModifier {
+    func body(content: Content) -> some View {
+        Group {
+            if #available(iOS 26.0, *) {
+                content
+                    .glassEffect(.regular, in: .rect(cornerRadius: NCOMMetrics.glassRadius, style: .continuous))
+            } else {
+                content
+                    .background(.regularMaterial, in: RoundedRectangle(cornerRadius: NCOMMetrics.glassRadius, style: .continuous))
+                    .overlay {
+                        RoundedRectangle(cornerRadius: NCOMMetrics.glassRadius, style: .continuous)
+                            .strokeBorder(.white.opacity(0.14), lineWidth: 1)
+                    }
+            }
+        }
+    }
+}
+
+private struct NCOMGlassButtonStyle: ButtonStyle {
     var prominent = false
 
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
             .font(.system(.body, design: .rounded).weight(.semibold))
-            .foregroundStyle(prominent ? Color.white : Color.primary)
-            .padding(.horizontal, 18)
+            .padding(.horizontal, 16)
             .padding(.vertical, 11)
-            .background {
-                RoundedRectangle(cornerRadius: .ncomGlassRadius, style: .continuous)
-                    .fill(prominent ? Color.accentColor : Color.clear)
-                    .background {
-                        if !prominent {
-                            RoundedRectangle(cornerRadius: .ncomGlassRadius, style: .continuous)
-                                .fill(.thinMaterial)
-                        }
-                    }
-                    .overlay {
-                        RoundedRectangle(cornerRadius: .ncomGlassRadius, style: .continuous)
-                            .strokeBorder(.white.opacity(prominent ? 0.0 : 0.18), lineWidth: 1)
-                    }
-            }
-            .scaleEffect(configuration.isPressed ? 0.97 : 1)
-            .animation(.spring(response: 0.26, dampingFraction: 0.72), value: configuration.isPressed)
+            .frame(minHeight: 44)
+            .modifier(NCOMButtonSurface(prominent: prominent, pressed: configuration.isPressed))
     }
 }
 
-extension ButtonStyle where Self == NCOMGlassButtonStyle {
-    static var ncomGlass: NCOMGlassButtonStyle { .init() }
-    static var ncomGlassProminent: NCOMGlassButtonStyle { .init(prominent: true) }
-}
+private struct NCOMButtonSurface: ViewModifier {
+    let prominent: Bool
+    let pressed: Bool
 
-struct StatusDot: View {
-    let color: Color
-    let label: String
-
-    var body: some View {
-        HStack(spacing: 8) {
-            Circle()
-                .fill(color)
-                .frame(width: 9, height: 9)
-            Text(label)
-                .font(.system(.subheadline, design: .rounded).weight(.semibold))
+    func body(content: Content) -> some View {
+        Group {
+            if #available(iOS 26.0, *) {
+                content
+                    .foregroundStyle(prominent ? .white : .primary)
+                    .glassEffect(
+                        prominent ? .regular.tint(.accentColor) : .regular,
+                        in: .rect(cornerRadius: NCOMMetrics.glassRadius, style: .continuous)
+                    )
+            } else {
+                content
+                    .foregroundStyle(prominent ? .white : .primary)
+                    .background(prominent ? Color.accentColor : Color.secondary.opacity(0.12), in: RoundedRectangle(cornerRadius: NCOMMetrics.glassRadius, style: .continuous))
+                    .overlay {
+                        RoundedRectangle(cornerRadius: NCOMMetrics.glassRadius, style: .continuous)
+                            .strokeBorder(.white.opacity(prominent ? 0 : 0.14), lineWidth: 1)
+                    }
+            }
         }
+        .scaleEffect(pressed ? 0.97 : 1)
+        .animation(.easeOut(duration: 0.16), value: pressed)
     }
 }
 
@@ -106,12 +108,9 @@ struct ContentView: View {
     @State private var isSending = false
 
     private enum RuntimeStatus {
-        case disconnected
-        case checking
-        case ready
-        case error
+        case disconnected, checking, ready, error
 
-        var label: String {
+        var title: String {
             switch self {
             case .disconnected: return "Disconnected"
             case .checking: return "Checking…"
@@ -131,108 +130,117 @@ struct ContentView: View {
     }
 
     var body: some View {
-        NavigationStack {
+        ZStack {
+            LinearGradient(
+                colors: [Color.black, Color(red: 0.045, green: 0.05, blue: 0.07), Color.black],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+            .ignoresSafeArea()
+
             ScrollView {
-                LazyVStack(alignment: .leading, spacing: 18) {
-                    header
-                    runtimeCard
-                    chatCard
-                    endpointCard
+                LazyVStack(alignment: .leading, spacing: NCOMMetrics.sectionSpacing) {
+                    hero
+                    runtimePanel
+                    chatPanel
+                    endpointPanel
+                    quickActions
                 }
-                .padding()
+                .padding(.horizontal, 16)
+                .padding(.top, 10)
+                .padding(.bottom, 24)
             }
-            .background {
-                LinearGradient(
-                    colors: [Color(.systemBackground), Color(.secondarySystemBackground)],
-                    startPoint: .topLeading,
-                    endPoint: .bottomTrailing
-                )
-                .ignoresSafeArea()
-            }
-            .navigationBarTitleDisplayMode(.inline)
         }
+        .preferredColorScheme(.dark)
+        .toolbar(.hidden, for: .navigationBar)
         .onChange(of: endpoint) { _, value in
             UserDefaults.standard.set(value, forKey: "ncomEndpoint")
         }
     }
 
-    private var header: some View {
-        HStack(alignment: .center, spacing: 14) {
-            NCOMLogo()
-            VStack(alignment: .leading, spacing: 2) {
+    private var hero: some View {
+        HStack(spacing: 14) {
+            ZStack {
+                Circle()
+                    .fill(.white.opacity(0.05))
+                    .frame(width: 58, height: 58)
+                NCOMLogo(size: 28)
+            }
+
+            VStack(alignment: .leading, spacing: 3) {
                 Text("NCOM AI")
                     .font(.system(.title2, design: .rounded).weight(.bold))
-                Text("Local-first AI runtime")
+                Text("Personal local-first AI runtime")
                     .font(.system(.subheadline, design: .rounded))
                     .foregroundStyle(.secondary)
             }
-            Spacer()
-            StatusDot(color: status.color, label: status.label)
+
+            Spacer(minLength: 12)
+
+            VStack(alignment: .trailing, spacing: 4) {
+                Circle()
+                    .fill(status.color)
+                    .frame(width: 10, height: 10)
+                Text(status.title)
+                    .font(.system(.caption, design: .rounded).weight(.semibold))
+                    .foregroundStyle(.secondary)
+            }
         }
         .padding(.horizontal, 4)
+        .padding(.vertical, 8)
     }
 
-    private var runtimeCard: some View {
-        NCOMGlass {
+    private var runtimePanel: some View {
+        NCOMGlassCard {
             VStack(alignment: .leading, spacing: 14) {
-                Text("RUNTIME")
-                    .font(.system(.caption, design: .rounded).weight(.bold))
-                    .foregroundStyle(.secondary)
-                    .tracking(0.8)
+                sectionTitle("RUNTIME")
 
-                HStack {
-                    Label("CPU inference", systemImage: "cpu")
-                    Spacer()
-                    Text("Local")
-                        .foregroundStyle(.secondary)
-                }
-                .font(.system(.body, design: .rounded))
+                statusRow(icon: "cpu", title: "Inference", value: "Local")
+                statusRow(icon: "network", title: "Endpoint", value: endpoint, truncate: true)
 
-                HStack {
-                    Label("Connection", systemImage: "network")
-                    Spacer()
-                    Text(endpoint)
-                        .foregroundStyle(.secondary)
-                        .lineLimit(1)
-                        .truncationMode(.middle)
-                }
-                .font(.system(.footnote, design: .rounded))
+                HStack(spacing: 10) {
+                    Button {
+                        Task { await health() }
+                    } label: {
+                        Label(status == .checking ? "Checking…" : "Check runtime", systemImage: "heart.text.square")
+                            .frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(NCOMGlassButtonStyle(prominent: true))
+                    .disabled(status == .checking)
+                    .accessibilityIdentifier("healthButton")
 
-                Button {
-                    Task { await health() }
-                } label: {
-                    Label(status == .checking ? "Checking…" : "Check runtime", systemImage: "heart.text.square")
-                        .frame(maxWidth: .infinity)
+                    Button {
+                        endpoint = "http://127.0.0.1:8765"
+                        status = .disconnected
+                    } label: {
+                        Image(systemName: "arrow.counterclockwise")
+                            .frame(width: 22)
+                    }
+                    .buttonStyle(NCOMGlassButtonStyle())
+                    .accessibilityLabel("Reset endpoint")
                 }
-                .buttonStyle(.ncomGlass)
-                .disabled(status == .checking)
             }
         }
     }
 
-    private var chatCard: some View {
-        NCOMGlass {
+    private var chatPanel: some View {
+        NCOMGlassCard {
             VStack(alignment: .leading, spacing: 14) {
                 HStack {
-                    Text("CHAT")
-                        .font(.system(.caption, design: .rounded).weight(.bold))
-                        .foregroundStyle(.secondary)
-                        .tracking(0.8)
+                    sectionTitle("CHAT")
                     Spacer()
-                    if isSending {
-                        ProgressView()
-                    }
+                    if isSending { ProgressView().controlSize(.small) }
                 }
 
                 if transcript.isEmpty {
                     VStack(spacing: 10) {
-                        NCOMLogo(compact: true)
-                        Text("Talk to your NCOM runtime")
+                        NCOMLogo(size: 25)
+                        Text("Ready when you are")
                             .font(.system(.headline, design: .rounded))
-                        Text("Messages are sent to the endpoint configured below.")
-                            .font(.system(.subheadline, design: .rounded))
-                            .multilineTextAlignment(.center)
+                        Text("Your messages go directly to the configured NCOM runtime.")
+                            .font(.system(.footnote, design: .rounded))
                             .foregroundStyle(.secondary)
+                            .multilineTextAlignment(.center)
                     }
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 18)
@@ -246,9 +254,11 @@ struct ContentView: View {
 
                 HStack(alignment: .bottom, spacing: 10) {
                     TextField("Message NCOM…", text: $message, axis: .vertical)
+                        .font(.system(.body, design: .rounded))
                         .textFieldStyle(.plain)
-                        .padding(12)
-                        .background(Color.primary.opacity(0.06), in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+                        .padding(.horizontal, 13)
+                        .padding(.vertical, 11)
+                        .background(.white.opacity(0.055), in: RoundedRectangle(cornerRadius: 18, style: .continuous))
                         .lineLimit(1...5)
                         .accessibilityIdentifier("chatInput")
 
@@ -259,52 +269,101 @@ struct ContentView: View {
                     } label: {
                         Image(systemName: "arrow.up")
                             .font(.system(size: 17, weight: .bold))
-                            .frame(width: 42, height: 42)
+                            .frame(width: 44, height: 44)
                     }
-                    .buttonStyle(.ncomGlassProminent)
-                    .accessibilityIdentifier("sendButton")
+                    .buttonStyle(NCOMGlassButtonStyle(prominent: true))
                     .disabled(isSending || message.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                    .accessibilityIdentifier("sendButton")
                 }
             }
         }
     }
 
-    private var endpointCard: some View {
-        NCOMGlass {
+    private var endpointPanel: some View {
+        NCOMGlassCard {
             VStack(alignment: .leading, spacing: 12) {
-                Text("RUNTIME ENDPOINT")
-                    .font(.system(.caption, design: .rounded).weight(.bold))
-                    .foregroundStyle(.secondary)
-                    .tracking(0.8)
-
+                sectionTitle("RUNTIME ENDPOINT")
                 TextField("http://192.168.x.x:8765", text: $endpoint)
+                    .font(.system(.body, design: .rounded))
                     .textInputAutocapitalization(.never)
                     .autocorrectionDisabled()
                     .keyboardType(.URL)
                     .textFieldStyle(.roundedBorder)
                     .accessibilityIdentifier("endpointField")
 
-                Text("For a physical iPhone, use the Surface's LAN address. 127.0.0.1 refers to the iPhone/simulator itself.")
-                    .font(.system(.footnote, design: .rounded))
-                    .foregroundStyle(.secondary)
+                Label(
+                    "On a physical iPhone, use the Surface's LAN address. 127.0.0.1 refers to the iPhone/simulator itself.",
+                    systemImage: "info.circle"
+                )
+                .font(.system(.footnote, design: .rounded))
+                .foregroundStyle(.secondary)
             }
         }
     }
 
-    private func messageBubble(_ message: ChatMessage) -> some View {
-        HStack {
-            if message.role == .assistant { Spacer(minLength: 26) }
+    private var quickActions: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            sectionTitle("QUICK ACCESS")
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 10) {
+                    quickAction("Projects", systemImage: "folder")
+                    quickAction("Agents", systemImage: "cpu")
+                    quickAction("MCP", systemImage: "network")
+                    quickAction("Artifacts", systemImage: "archivebox")
+                    quickAction("Settings", systemImage: "gearshape")
+                }
+            }
+        }
+    }
 
-            Text(message.content)
+    private func quickAction(_ title: String, systemImage: String) -> some View {
+        Button { } label: {
+            Label(title, systemImage: systemImage)
+                .font(.system(.subheadline, design: .rounded).weight(.medium))
+        }
+        .buttonStyle(NCOMGlassButtonStyle())
+    }
+
+    private func sectionTitle(_ text: String) -> some View {
+        Text(text)
+            .font(.system(.caption, design: .rounded).weight(.bold))
+            .foregroundStyle(.secondary)
+            .tracking(1.0)
+    }
+
+    private func statusRow(icon: String, title: String, value: String, truncate: Bool = false) -> some View {
+        HStack(spacing: 11) {
+            Image(systemName: icon)
+                .frame(width: 20)
+                .foregroundStyle(.secondary)
+            Text(title)
+                .foregroundStyle(.secondary)
+            Spacer(minLength: 8)
+            Text(value)
+                .foregroundStyle(.primary)
+                .lineLimit(1)
+                .truncationMode(truncate ? .middle : .tail)
+        }
+        .font(.system(.subheadline, design: .rounded))
+    }
+
+    private func messageBubble(_ item: ChatMessage) -> some View {
+        HStack {
+            if item.role == .assistant { Spacer(minLength: 24) }
+
+            Text(item.content)
                 .font(.system(.body, design: .rounded))
                 .foregroundStyle(.primary)
-                .padding(13)
-                .background {
-                    RoundedRectangle(cornerRadius: 20, style: .continuous)
-                        .fill(message.role == .user ? Color.accentColor.opacity(0.16) : .thinMaterial)
-                }
+                .padding(.horizontal, 13)
+                .padding(.vertical, 11)
+                .background(
+                    item.role == .user
+                        ? Color.accentColor.opacity(0.18)
+                        : Color.white.opacity(0.06),
+                    in: RoundedRectangle(cornerRadius: 20, style: .continuous)
+                )
 
-            if message.role == .user { Spacer(minLength: 26) }
+            if item.role == .user { Spacer(minLength: 24) }
         }
     }
 
@@ -365,16 +424,12 @@ struct ContentView: View {
     }
 }
 
-struct ChatMessage: Identifiable, Equatable {
+private struct ChatMessage: Identifiable, Equatable {
     let id = UUID()
     let role: Role
     let content: String
 
-    enum Role {
-        case user
-        case assistant
-        case system
-    }
+    enum Role { case user, assistant, system }
 }
 
 private struct ChatResponse: Decodable {

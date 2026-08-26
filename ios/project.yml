@@ -5,19 +5,29 @@ options:
     iOS: '17.0'
 settings:
   base:
-    SWIFT_VERSION: '5.0'
+    SWIFT_VERSION: '6.0'
     IPHONEOS_DEPLOYMENT_TARGET: '17.0'
+packages:
+  LlamaSwift:
+    github: mattt/llama.swift
+    exactVersion: 2.10331.0
 targets:
   NCOMAI:
     type: application
     platform: iOS
     sources:
       - path: NCOMApp
+    dependencies:
+      - package: LlamaSwift
+        product: LlamaSwift
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.ncom.ai
         INFOPLIST_KEY_CFBundleDisplayName: NCOM AI
         INFOPLIST_KEY_NSLocalNetworkUsageDescription: NCOM uses your local network to connect to an optional NCOM desktop runtime.
+        INFOPLIST_KEY_NSBluetoothAlwaysUsageDescription: NCOM uses Bluetooth to discover and connect to your authorized NCOM devices.
+        INFOPLIST_KEY_NFCReaderUsageDescription: NCOM uses NFC to identify supported tags and authorized accessories.
+        INFOPLIST_KEY_NSMicrophoneUsageDescription: NCOM uses the microphone for its optional acoustic AI link.
         TARGETED_DEVICE_FAMILY: '1,2'
         GENERATE_INFOPLIST_FILE: YES
   NCOMAIUITests:

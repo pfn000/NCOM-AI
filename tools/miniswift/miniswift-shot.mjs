@@ -16,7 +16,8 @@ const outputPath = arg('output', './artifacts/miniswift-phone.png');
 const editorSelector = arg('editor-selector');
 const runSelector = arg('run-selector');
 const previewSelector = arg('preview-selector');
-const timeoutMs = Number(arg('timeout-ms', '30000'));
+const successSelector = arg('success-selector');
+const timeoutMs = Number(arg('timeout-ms', '45000'));
 
 if (!sourcePath) {
   console.error('Usage: miniswift-shot.mjs --source FILE [--output FILE] [--preview-selector SELECTOR]');
@@ -36,8 +37,13 @@ async function diagnostics(error) {
   console.error(`Diagnostic screenshot: ${diagnosticPath}`);
 }
 
-function parseTextNodes() {
-  return page.locator('body *').filter({ hasText: /Run|Compile|Build/i });
+async function waitForBuildSuccess() {
+  const success = successSelector
+    ? page.locator(successSelector).first()
+    : page.getByText(/Build succeeded\s*·\s*\d+ view\(s\)/i).first();
+
+  await success.waitFor({ state: 'visible', timeout: timeoutMs });
+  return await success.innerText();
 }
 
 try {
@@ -69,8 +75,8 @@ try {
   } else {
     const candidates = [
       page.getByRole('button', { name: /^Run$/i }).first(),
-      page.getByRole('button', { name: /Run|Compile/i }).first(),
-      page.locator('button').filter({ hasText: /Run|Compile/i }).first(),
+      page.getByRole('button', { name: /Run|Compile|Build/i }).first(),
+      page.locator('button').filter({ hasText: /Run|Compile|Build/i }).first(),
     ];
     let clicked = false;
     for (const candidate of candidates) {
@@ -85,6 +91,14 @@ try {
     if (!clicked) throw new Error('No Run/Compile button found. Supply --run-selector.');
   }
 
+  // MiniSwift compiles asynchronously. KUI2031 entries are platform-mapping
+  // warnings and do not mean the build failed. Wait for the explicit success line.
+  const buildMessage = await waitForBuildSuccess();
+  console.log(`MiniSwift build completed: ${buildMessage}`);
+
+  // Allow the preview canvas to paint after the successful build.
+  await page.waitForTimeout(250);
+
   if (previewSelector) {
     const preview = page.locator(previewSelector).first();
     await preview.waitFor({ state: 'visible', timeout: timeoutMs });
@@ -92,10 +106,15 @@ try {
   } else {
     const phoneHints = [
       '[data-phone]',
+      '[data-device]',
       '[data-preview]',
       '[aria-label*="preview" i]',
+      '[aria-label*="iphone" i]',
       '[class*="phone" i]',
+      '[class*="iphone" i]',
       '[class*="device" i]',
+      '[class*="preview" i]',
+      'iframe',
       'canvas',
     ];
 
@@ -119,7 +138,7 @@ try {
     }
 
     if (!captured) {
-      throw new Error('Could not identify the phone preview. Supply --preview-selector.');
+      throw new Error('Build succeeded, but the phone preview was not identifiable. Supply --preview-selector.');
     }
   }
 

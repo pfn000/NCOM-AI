@@ -58,6 +58,20 @@ jobs:
           xcrun simctl boot "${{ steps.simulator.outputs.udid }}" || true
           xcrun simctl bootstatus "${{ steps.simulator.outputs.udid }}" -b
 
+      - name: Run UI smoke tests
+        working-directory: ios
+        run: |
+          set -euo pipefail
+          xcodebuild test \
+            -project NCOMAI.xcodeproj \
+            -scheme NCOMAI \
+            -sdk iphonesimulator \
+            -destination "id=${{ steps.simulator.outputs.udid }}" \
+            -derivedDataPath build \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            test
+
       - name: Install app
         working-directory: ios
         run: |

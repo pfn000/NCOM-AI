@@ -2,8 +2,8 @@ import Foundation
 import Combine
 
 /// NCOM Engine is the execution/guts layer beneath Apple Foundation Models.
-/// It owns tool routing and future memory/VM/file adapters while the Apple model
-/// remains the cognitive header when it is available.
+/// NCOM Desktop means the internal VM/workspace by default. A physical PC host
+/// is an optional expansion source and is never assumed to be the primary feed.
 @MainActor
 final class NCOMEngine: ObservableObject {
     @Published private(set) var state: State
@@ -69,6 +69,6 @@ final class NCOMEngine: ObservableObject {
 
     func toolSnapshotText() -> String {
         let snapshot = router.snapshot()
-        return "\(snapshot.runtime) • version \(snapshot.appVersion) • capabilities: \(snapshot.capabilities.joined(separator: ", "))"
+        return "\(snapshot.runtime) • \(snapshot.primaryWorkspace) • version \(snapshot.appVersion) • capabilities: \(snapshot.capabilities.joined(separator: ", "))"
     }
 }

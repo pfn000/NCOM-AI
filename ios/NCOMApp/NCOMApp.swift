@@ -6,12 +6,15 @@ struct NCOMApp: App {
     @StateObject private var models: NCOMLocalModelManager
     @StateObject private var engine: NCOMEngine
     @StateObject private var library: NCOMAppLibrary
+    @StateObject private var programs: NCOMProgramStore
 
     init() {
         let sharedModels = NCOMLocalModelManager()
         _models = StateObject(wrappedValue: sharedModels)
         _engine = StateObject(wrappedValue: NCOMEngine(localModels: sharedModels))
         _library = StateObject(wrappedValue: NCOMAppLibrary())
+        _programs = StateObject(wrappedValue: NCOMProgramStore())
+        NCOMBackgroundProgramScheduler.register()
     }
 
     var body: some Scene {
@@ -20,6 +23,7 @@ struct NCOMApp: App {
                 .environmentObject(engine)
                 .environmentObject(models)
                 .environmentObject(library)
+                .environmentObject(programs)
         }
     }
 }
@@ -98,7 +102,7 @@ struct NCOMRootView: View {
             ContentView().tabItem { Label("Chat", systemImage: "bubble.left.and.bubble.right.fill") }.tag(RootTab.chat)
             NCOMAppsView().tabItem { Label("Apps", systemImage: "square.grid.3x3.fill") }.tag(RootTab.apps)
             NCOMDevicesView().tabItem { Label("Devices", systemImage: "antenna.radiowaves.left.and.right") }.tag(RootTab.devices)
-            NavigationStack { NCOMDesktopActivityView(endpoint: UserDefaults.standard.string(forKey: "ncomEndpoint") ?? "http://127.0.0.1:8765").padding().background(NCOMBackground()) }
+            NavigationStack { NCOMDesktopActivityView(endpoint: UserDefaults.standard.string(forKey: "ncomEndpoint") ?? "").padding().background(NCOMBackground()) }
                 .tabItem { Label("Desktop", systemImage: "display.2") }.tag(RootTab.desktop)
             NavigationStack {
                 Form {

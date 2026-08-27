@@ -8,8 +8,7 @@ final class NCOMAIUITests: XCTestCase {
 
         XCTAssertTrue(app.staticTexts["NCOM AI"].waitForExistence(timeout: 5))
         XCTAssertTrue(app.staticTexts["Apple Foundation Models + NCOM Engine"].exists)
-        XCTAssertTrue(app.staticTexts["COGNITIVE HEADER"].exists)
-        XCTAssertTrue(app.staticTexts["NCOM CONVERSATION"].exists)
+        XCTAssertTrue(app.staticTexts["CHAT"].exists)
         XCTAssertTrue(app.textFields["chatInput"].exists)
         XCTAssertTrue(app.buttons["sendButton"].exists)
     }
@@ -22,5 +21,16 @@ final class NCOMAIUITests: XCTestCase {
         input.tap()
         input.typeText("Hello NCOM")
         XCTAssertEqual(input.value as? String, "Hello NCOM")
+    }
+
+    func testRootNavigationSurfaces() {
+        let app = XCUIApplication()
+        app.launch()
+
+        XCTAssertTrue(app.tabBars.buttons["Chat"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.tabBars.buttons["Apps"].exists)
+        XCTAssertTrue(app.tabBars.buttons["Devices"].exists)
+        XCTAssertTrue(app.tabBars.buttons["Desktop"].exists)
+        XCTAssertTrue(app.tabBars.buttons["Settings"].exists)
     }
 }

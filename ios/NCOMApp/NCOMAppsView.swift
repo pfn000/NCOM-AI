@@ -33,15 +33,16 @@ final class NCOMAppLibrary: ObservableObject {
             persist()
         }
     }
+
     func add(_ app: NCOMAppItem) { apps.append(app); persist() }
     func remove(_ id: UUID) { apps.removeAll { $0.id == id }; persist() }
     private func persist() { if let data = try? JSONEncoder().encode(apps) { UserDefaults.standard.set(data, forKey: key) } }
 }
 
 struct NCOMAppsView: View {
+    @EnvironmentObject private var library: NCOMAppLibrary
     @EnvironmentObject private var models: NCOMLocalModelManager
-    @StateObject private var library = NCOMAppLibrary()
-    @StateObject private var programs = NCOMProgramStore()
+    @EnvironmentObject private var programs: NCOMProgramStore
     @State private var showBuilder = false
     @State private var showPrograms = false
     @State private var selectedApp: NCOMAppItem?
@@ -102,7 +103,7 @@ private struct NCOMAppDestination: View {
         case "Hail Sniff": NCOMHailSniffView()
         case "Devices": NCOMDevicesView()
         case "Acoustic Link": NCOMAcousticLinkView()
-        case "NCOM Desktop": NCOMDesktopActivityView(endpoint: UserDefaults.standard.string(forKey: "ncomEndpoint") ?? "http://127.0.0.1:8765").padding()
+        case "NCOM Desktop": NCOMDesktopActivityView(endpoint: UserDefaults.standard.string(forKey: "ncomEndpoint") ?? "").padding()
         default: ContentUnavailableView(app.name, systemImage: app.symbol, description: Text("This NCOM app is registered, but its native view is not connected yet."))
         }
     }

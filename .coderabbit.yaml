@@ -1,7 +1,41 @@
+# yaml-language-server: $schema=https://coderabbit.ai/integrations/schema.v2.json
 reviews:
-  profile: chill
+  profile: assertive
   request_changes_workflow: true
   high_level_summary: true
-  poem: false
+  auto_review:
+    enabled: true
+    auto_incremental_review: true
+    auto_pause_after_reviewed_commits: 0
+    drafts: false
+  path_instructions:
+    - path: "ios/**/*.swift"
+      instructions: >
+        Review every human-written changed line. Verify Swift 6 concurrency, actor isolation,
+        Sendable safety, current iOS SDK API usage, accessibility, lifecycle/state correctness,
+        performance, error handling, and real functionality. Reject deprecated or invented APIs,
+        simulations presented as implementations, dead controls, duplicate engines, and UI that
+        only looks functional. Require appropriate tests for behavioral changes.
+    - path: "ios/**/*.yml"
+      instructions: >
+        Verify the workflow is reproducible, fails on real errors, produces the expected iOS app
+        and screenshot artifacts, and does not hide failures with continue-on-error or weak assertions.
+    - path: "core/**/*.py"
+      instructions: >
+        Review every changed line for real backend behavior, error handling, concurrency, resource
+        cleanup, input validation, security, deterministic tests, and compatibility with the NCOM protocol.
+    - path: "desktop/**/*.py"
+      instructions: >
+        Verify the desktop runtime actually starts, binds correctly for intended LAN use, exposes
+        the documented health/activity/chat routes, handles failures, and does not claim VM behavior
+        that is not implemented.
+    - path: "**/*Tests*.swift"
+      instructions: >
+        Tests must make meaningful assertions and fail when production behavior is broken. Reject
+        screenshot-only or assertion-free tests used solely to turn CI green.
+    - path: ".github/workflows/**"
+      instructions: >
+        Treat CI as a release gate. Ensure build, tests, simulator launch, UI interaction,
+        screenshot capture, and artifact collection are real and fail loudly when broken.
 chat:
   auto_reply: false

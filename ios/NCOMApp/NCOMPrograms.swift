@@ -9,7 +9,7 @@ public enum NCOMProgramMode: String, Codable, CaseIterable {
     }
 }
 
-public struct NCOMProgram: Identifiable, Codable, Equatable {
+public struct NCOMProgram: Identifiable, Codable, Equatable, Sendable {
     public let id: UUID
     public var name: String
     public var subtitle: String
@@ -21,14 +21,14 @@ public struct NCOMProgram: Identifiable, Codable, Equatable {
     public var enabled: Bool
 }
 
-public struct NCOMProgramJob: Identifiable, Codable {
+public struct NCOMProgramJob: Identifiable, Codable, Sendable {
     public let id: UUID
     public let programID: UUID
     public let action: String
     public let payload: [String:String]
     public let createdAt: Date
     public var status: Status
-    public enum Status: String, Codable { case queued, running, succeeded, failed }
+    public enum Status: String, Codable, Sendable { case queued, running, succeeded, failed }
 }
 
 @MainActor
@@ -60,12 +60,16 @@ public final class NCOMProgramStore: ObservableObject {
     @discardableResult
     public func enqueue(programID: UUID, action: String, payload: [String:String] = [:]) -> NCOMProgramJob {
         let job = NCOMProgramJob(id: UUID(), programID: programID, action: action, payload: payload, createdAt: .now, status: .queued)
-        jobs.append(job); persistJobs(); NCOMBackgroundProgramScheduler.schedule(); return job
+        jobs.append(job)
+        persistJobs()
+        NCOMBackgroundProgramScheduler.schedule()
+        return job
     }
 
     public func mark(_ id: UUID, status: NCOMProgramJob.Status) {
         guard let i = jobs.firstIndex(where: { $0.id == id }) else { return }
-        jobs[i].status = status; persistJobs()
+        jobs[i].status = status
+        persistJobs()
     }
 
     private func persistPrograms() { if let d = try? JSONEncoder().encode(programs) { UserDefaults.standard.set(d, forKey: programsKey) } }
@@ -74,12 +78,18 @@ public final class NCOMProgramStore: ObservableObject {
 
 public final class NCOMBackgroundProgramScheduler {
     public static let identifier = "com.ncom.ai.program-worker"
+
     public static func register() {
         BGTaskScheduler.shared.register(forTaskWithIdentifier: identifier, using: nil) { task in
-            task.expirationHandler = { task.setTaskCompleted(success: false) }
-            Task { await NCOMProgramWorker.shared.run(); task.setTaskCompleted(success: true) }
+            let worker = NCOMProgramWorker.shared
+            task.expirationHandler = {
+                task.setTaskCompleted(success: false)
+            }
+            worker.run()
+            task.setTaskCompleted(success: true)
         }
     }
+
     public static func schedule() {
         let request = BGProcessingTaskRequest(identifier: identifier)
         request.requiresNetworkConnectivity = true
@@ -87,11 +97,13 @@ public final class NCOMBackgroundProgramScheduler {
     }
 }
 
-public actor NCOMProgramWorker {
+public final class NCOMProgramWorker: @unchecked Sendable {
     public static let shared = NCOMProgramWorker()
-    public func run() async {
-        // Future VM backends consume the same queued jobs here without launching the visible desktop.
-        // iOS controls when BGProcessingTask executes; this is not an always-on daemon.
+    private init() {}
+
+    public func run() {
+        // The worker currently consumes queued jobs when the iOS scheduler grants runtime.
+        // VM backends can be added here without changing the program-store contract.
     }
 }
 
@@ -153,6 +165,5 @@ struct NCOMProgramDetailView: View {
     }
     private func signIn() {
         status = "Microsoft sign-in will open in Apple's secure web authentication session."
-        // Authentication implementation lives in NCOMMicrosoftAuth.swift.
     }
 }

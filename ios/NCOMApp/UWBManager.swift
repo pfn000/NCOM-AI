@@ -1,6 +1,6 @@
 import Foundation
-import NearbyInteraction
-import CoreBluetooth
+@preconcurrency import NearbyInteraction
+@preconcurrency import CoreBluetooth
 
 @MainActor
 final class UWBManager: NSObject, ObservableObject {
@@ -127,7 +127,7 @@ extension UWBManager: NISessionDelegate {
         guard let object = nearbyObjects.first else { return }
         let distance = object.distance
         let direction = object.direction
-        Task { @MainActor in
+        Task { @MainActor [distance, direction] in
             self.distance = distance
             self.direction = direction
             self.sessionState = "Connected"
@@ -169,17 +169,14 @@ extension UWBManager: CBPeripheralManagerDelegate {
     }
 
     nonisolated func peripheralManager(_ peripheral: CBPeripheralManager, didReceiveRead request: CBATTRequest) {
-        let uuid = request.characteristic.uuid
-        guard uuid == CBUUID(string: "87654321-4321-8765-4321-876543210987") else {
+        let characteristicUUID = request.characteristic.uuid
+        let tokenData = (try? niSession?.discoveryToken.flatMap(archiveToken)) ?? nil
+        guard characteristicUUID == CBUUID(string: "87654321-4321-8765-4321-876543210987"),
+              let tokenData else {
             peripheral.respond(to: request, withResult: .requestNotSupported)
             return
         }
-        guard let token = niSession?.discoveryToken,
-              let data = archiveToken(token) else {
-            peripheral.respond(to: request, withResult: .unlikelyError)
-            return
-        }
-        request.value = data
+        request.value = tokenData
         peripheral.respond(to: request, withResult: .success)
     }
 
@@ -271,9 +268,10 @@ extension UWBManager: CBPeripheralDelegate {
 
     nonisolated func peripheral(_ peripheral: CBPeripheral, didUpdateValueFor characteristic: CBCharacteristic, error: Error?) {
         let data = characteristic.value
+        let uuid = characteristic.uuid
         let errorMessage = error?.localizedDescription
         Task { @MainActor in
-            guard characteristic.uuid == tokenCharacteristicUUID,
+            guard uuid == tokenCharacteristicUUID,
                   errorMessage == nil,
                   let data,
                   let token = unarchiveToken(data) else {
